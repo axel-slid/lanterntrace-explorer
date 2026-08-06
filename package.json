@@ -1,0 +1,26 @@
+{
+  "name": "lanterntrace-explorer",
+  "version": "0.1.0",
+  "description": "Electron prototype for exploring spotted lanternfly invasion-front evidence.",
+  "main": "main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --enable-logging",
+    "data:gbif": "node scripts/fetch-gbif-observations.mjs",
+    "pack": "electron-builder --dir"
+  },
+  "devDependencies": {
+    "electron": "^43.0.0",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "maplibre-gl": "^5.6.2"
+  },
+  "build": {
+    "appId": "org.lanterntrace.explorer",
+    "productName": "LanternTrace Explorer",
+    "icon": "assets/icon.icns",
+    "files": ["**/*", "!node_modules/.cache/**/*"]
+  }
+}

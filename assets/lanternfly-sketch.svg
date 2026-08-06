@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420" role="img" aria-labelledby="title desc">
+  <title id="title">Spotted lanternfly field sketch</title>
+  <desc id="desc">A monochrome and red scientific-style sketch of a spotted lanternfly with folded wings.</desc>
+  <defs>
+    <linearGradient id="wing" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dfe8e8" stop-opacity=".94"/><stop offset="1" stop-color="#738a97" stop-opacity=".68"/></linearGradient>
+    <linearGradient id="hind" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8377"/><stop offset="1" stop-color="#b74247"/></linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="6"/></filter>
+  </defs>
+  <g opacity=".18" filter="url(#soft)" fill="#7de2e4"><ellipse cx="342" cy="210" rx="275" ry="135"/></g>
+  <g stroke="#d9e5e7" stroke-linecap="round" stroke-linejoin="round">
+    <path fill="url(#wing)" stroke-width="3" d="M341 95C280 25 130 29 55 115c-32 37-42 109-9 147 37 43 125 23 196-14l121-64-22-89Z"/>
+    <path fill="url(#wing)" stroke-width="3" d="M378 94c70-63 206-61 278 24 31 37 39 104 9 143-35 45-125 31-202-6l-111-54 26-107Z"/>
+    <path fill="none" stroke="#a9bcc2" stroke-width="2" d="M79 121c84-23 175 22 258 63M96 92c91 2 160 47 230 91M643 126c-83-20-170 27-263 72M617 91c-86 5-163 52-232 103"/>
+    <path fill="none" stroke="#a9bcc2" stroke-width="1.5" d="M68 154c85-4 169 26 259 61M655 160c-92-3-168 27-270 62"/>
+  </g>
+  <g fill="url(#hind)" stroke="#f2b3a8" stroke-width="2">
+    <path d="M302 160c-57 6-97 29-108 57-9 22 18 42 63 45 48 3 75-17 87-42 11-24-5-56-42-60Z"/>
+    <path d="M416 161c59 8 101 31 111 58 8 21-21 40-65 43-47 2-74-17-84-43-9-25 2-52 38-58Z"/>
+  </g>
+  <g fill="#131e2c" opacity=".95">
+    <circle cx="249" cy="191" r="6"/><circle cx="277" cy="212" r="5"/><circle cx="225" cy="227" r="4"/><circle cx="303" cy="236" r="5"/><circle cx="463" cy="193" r="6"/><circle cx="437" cy="213" r="5"/><circle cx="491" cy="228" r="4"/><circle cx="415" cy="238" r="5"/>
+  </g>
+  <g stroke="#c5d5d8" stroke-linecap="round" fill="none">
+    <path stroke-width="8" d="M353 101c-11 37-13 88-10 150 2 47 10 84 20 103"/>
+    <path stroke="#152238" stroke-width="4" d="M359 99c-10 43-11 96-7 149 3 45 9 80 17 105"/>
+    <ellipse fill="#d9e5e7" stroke-width="3" cx="358" cy="80" rx="28" ry="35"/>
+    <path stroke-width="3" d="M340 62c-43-31-59-29-80-18M375 61c38-31 58-29 79-16M333 55c-10-29-20-42-35-49M380 53c11-29 22-41 37-47"/>
+    <path stroke-width="3" d="M336 230c-53 23-81 58-114 99M339 248c-60 44-82 84-101 122M389 230c55 24 82 57 114 99M388 248c57 39 82 82 102 122"/>
+    <path stroke-width="3" d="M331 218c-58-3-111 5-149 27M393 218c62-4 111 5 151 29"/>
+  </g>
+  <g fill="#f0f7f7" opacity=".9"><circle cx="349" cy="74" r="4"/><circle cx="367" cy="74" r="4"/></g>
+</svg>
