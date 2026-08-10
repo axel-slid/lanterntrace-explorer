@@ -8,4 +8,4 @@ LanternTrace source code and third-party data have separate terms.
 - The 2025 U.S. Census cartographic boundary archive is downloaded from the U.S. Census Bureau. U.S. federal cartographic data are public domain; source attribution is retained.
 - OpenFreeMap/OpenStreetMap basemap content is used only at runtime and remains subject to its source attribution and terms.
 
-The application excludes the occurrence snapshot and research caches from the packaged desktop binary. See `research/input-lock.json` and `research/results/data_provenance.json` for exact sources and SHA-256 checksums.
+The packaged desktop application includes the locked occurrence snapshot so Species Explorer is complete; the per-record upstream licenses above continue to apply. It excludes model-training caches and research-only inputs. See `research/input-lock.json` and `research/results/data_provenance.json` for exact sources and SHA-256 checksums.

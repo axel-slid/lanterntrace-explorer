@@ -39,7 +39,7 @@ let mapLayersAdded = false;
 const timelineOverviewZoom = 4.75;
 
 function timelineMaxIndex() {
-  return forecastSettings.projectionsEnabled ? snapshots.length - 1 : latestObservedSnapshotIndex;
+  return forecastSettings.projectionsEnabled && !benchmarkActive() ? snapshots.length - 1 : latestObservedSnapshotIndex;
 }
 
 function modelColor(modelId) {
@@ -623,6 +623,10 @@ function setBenchmarkYear(year) {
 function setLabMode(mode) {
   activeLabMode = mode === 'scenario' ? 'scenario' : 'benchmark';
   const benchmarkMode = activeLabMode === 'benchmark';
+  if (benchmarkMode) {
+    stopPlayback();
+    snapshotIndex = latestObservedSnapshotIndex;
+  }
   $('#benchmark-lab-panel')?.classList.toggle('hidden', !benchmarkMode);
   $('#scenario-lab-panel')?.classList.toggle('hidden', benchmarkMode);
   $('#benchmark-mode')?.classList.toggle('active', benchmarkMode);
@@ -636,6 +640,7 @@ function setLabMode(mode) {
   renderModelLab();
   updateBenchmarkMap();
   syncForecastSettingsUI();
+  updateSnapshot();
   startCorridorAnimation();
   updatePlaybackControls();
   if (benchmarkMode && activeSection === 'methods') map?.easeTo({ center: [-75, 41.5], zoom: 4.25, duration: 650 });
@@ -1098,8 +1103,9 @@ function createStarfield() {
 function renderTimelineTicks() {
   const maxIndex = timelineMaxIndex();
   const visibleSnapshots = snapshots.slice(0, maxIndex + 1);
+  const showForecastTimeline = forecastSettings.projectionsEnabled && !benchmarkActive();
   $('#timeline-step-count').textContent = visibleSnapshots.length;
-  $('#timeline-mode-label').textContent = forecastSettings.projectionsEnabled ? 'EVIDENCE + FORECAST SCENARIOS' : 'OBSERVED EVIDENCE';
+  $('#timeline-mode-label').textContent = showForecastTimeline ? 'EVIDENCE + FORECAST SCENARIOS' : 'OBSERVED EVIDENCE';
   $('#timeline').max = maxIndex;
   const years = visibleSnapshots.reduce((entries, snapshot, index) => {
     if (!entries.some((entry) => entry.year === snapshot.year)) entries.push({ year: snapshot.year, index, isProjection: Boolean(snapshot.isProjection) });
@@ -1109,10 +1115,10 @@ function renderTimelineTicks() {
   const firstProjection = visibleSnapshots.findIndex((snapshot) => snapshot.isProjection);
   const evidenceShare = firstProjection === -1 ? 100 : (firstProjection / visibleSnapshots.length) * 100;
   $('.timeline-track').style.setProperty('--evidence-share', `${evidenceShare}%`);
-  $('.timeline-regions').innerHTML = forecastSettings.projectionsEnabled
+  $('.timeline-regions').innerHTML = showForecastTimeline
     ? '<span>OBSERVED EVIDENCE <b>2019–2025</b></span><span>FORECAST SCENARIOS <b>2026–2030</b></span>'
     : '<span>OBSERVED EVIDENCE <b>2019–2025</b></span>';
-  $('.timeline-regions').classList.toggle('observed-only', !forecastSettings.projectionsEnabled);
+  $('.timeline-regions').classList.toggle('observed-only', !showForecastTimeline);
   $('#timeline').value = Math.min(snapshotIndex, maxIndex);
 }
 
