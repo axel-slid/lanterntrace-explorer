@@ -1,0 +1,22 @@
+{
+  "generated/observations.js": {
+    "sha256": "cd49571c4d8cd326e8ccd9739bac6ba6e0d860ebfd399af253c99f72cdc27527",
+    "source": "GBIF occurrence API snapshot retrieved 2026-08-02"
+  },
+  ".model-cache/ailanthus-altissima-ne.json": {
+    "sha256": "f00b6bde366d35c2bb6e0b6177174938fafaa8351a308181c2acec0d07e41238",
+    "source": "GBIF taxon 3190653 coordinate cache"
+  },
+  ".model-cache/cb_2025_us_state_500k.zip": {
+    "sha256": "4295a503ff47e6787adfb520ad6706557e41c2ce57ced5a134087f8e35143a02",
+    "source": "U.S. Census 2025 Cartographic Boundary Files"
+  },
+  ".model-cache/wc2.1_10m_elev.zip": {
+    "sha256": "6a9f4e9a37f289d594ed1567b63be344a4dacf247f0b69756e81df031087e3bd",
+    "source": "WorldClim 2.1 elevation, 10 minute"
+  },
+  ".model-cache/wc2.1_10m_bio.zip": {
+    "sha256": "00513224583665ec0f2f955a4ec252730c4deb2004cce9e793492a3f26df4dcf",
+    "source": "WorldClim 2.1 bioclimatic variables, 10 minute"
+  }
+}

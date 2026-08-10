@@ -8,6 +8,8 @@
     "start": "electron .",
     "dev": "electron . --enable-logging",
     "data:gbif": "node scripts/fetch-gbif-observations.mjs",
+    "model:build": "python3 scripts/build-diffusion-model.py",
+    "model:test": "python3 scripts/build-diffusion-model.py --verify",
     "pack": "electron-builder --dir"
   },
   "devDependencies": {

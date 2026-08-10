@@ -3,9 +3,15 @@ const observationBundle = window.LanternTraceObservations || { metadata: {}, obs
 const observationPoints = observationBundle.observations;
 const observationMetadata = observationBundle.metadata;
 const previewObservationPoints = observationPoints.filter((_, index) => index % 20 === 0);
+const modelBundle = window.LanternTraceModels || { metadata: {}, variants: [], topFive: [], models: {} };
+let selectedModelId = modelBundle.defaultModel || modelBundle.topFive?.[0] || null;
 
-const layers = { heatmap: true, reports: true, front: true, uncertainty: true, corridors: true, sites: false };
-let snapshotIndex = snapshots.length - 1;
+const layers = { heatmap: true, reports: true, front: true, interpolation: true, uncertainty: false, corridors: true, sites: false };
+const latestObservedSnapshotIndex = snapshots.reduce((latest, snapshot, index) => snapshot.isProjection ? latest : index, 0);
+const forecastSettings = { projectionsEnabled: false, comparisonEnabled: false };
+const modelColors = ['#78efb5', '#f2c96d', '#73b9ff', '#dd91f3', '#ff907d'];
+let snapshotIndex = latestObservedSnapshotIndex;
+let activeSection = 'front';
 let map;
 let playing = false;
 let timer;
@@ -19,6 +25,15 @@ let corridorAnimationFrame;
 let corridorAnimationLast = 0;
 let usingReportPreview = false;
 const timelineOverviewZoom = 4.75;
+
+function timelineMaxIndex() {
+  return forecastSettings.projectionsEnabled ? snapshots.length - 1 : latestObservedSnapshotIndex;
+}
+
+function modelColor(modelId) {
+  const index = Math.max(0, modelBundle.topFive.indexOf(modelId));
+  return modelColors[index % modelColors.length];
+}
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -176,8 +191,16 @@ function convexHull(points) {
   return hull;
 }
 
-function occurrenceEnvelope(occupiedCells) {
-  const unvisited = new Set(occupiedCells.keys());
+function occurrenceEnvelope(occupiedCells, { minimumCellCount } = {}) {
+  // A single convex hull falsely fills the space between distant satellite
+  // reports. Keep locally connected, higher-density clusters separate. The
+  // adaptive floor prevents a chain of lightly reported cells from becoming
+  // one authoritative-looking "core" as the public dataset grows.
+  const counts = [...occupiedCells.values()].sort((a, b) => a - b);
+  const adaptiveMinimum = minimumCellCount ?? Math.max(2, counts[Math.floor(counts.length * .70)] || 2);
+  const repeatedCells = new Map([...occupiedCells].filter(([, count]) => count >= adaptiveMinimum));
+  const evidenceCells = repeatedCells.size >= 3 ? repeatedCells : occupiedCells;
+  const unvisited = new Set(evidenceCells.keys());
   const components = [];
   while (unvisited.size) {
     const start = unvisited.values().next().value;
@@ -188,8 +211,8 @@ function occurrenceEnvelope(occupiedCells) {
       const key = queue.pop();
       const [x, y] = key.split(':').map(Number);
       component.push([x, y]);
-      for (let dx = -2; dx <= 2; dx += 1) {
-        for (let dy = -2; dy <= 2; dy += 1) {
+      for (let dx = -1; dx <= 1; dx += 1) {
+        for (let dy = -1; dy <= 1; dy += 1) {
           if (!dx && !dy) continue;
           const neighbor = `${x + dx}:${y + dy}`;
           if (unvisited.delete(neighbor)) queue.push(neighbor);
@@ -203,12 +226,38 @@ function occurrenceEnvelope(occupiedCells) {
     });
     const ring = convexHull(corners);
     if (ring.length >= 4) {
-      const reportWeight = component.reduce((total, [x, y]) => total + (occupiedCells.get(`${x}:${y}`) || 0), 0);
+      const reportWeight = component.reduce((total, [x, y]) => total + (evidenceCells.get(`${x}:${y}`) || 0), 0);
       components.push({ ring, reportWeight, cellCount: component.length });
     }
   }
-  const dominant = components.sort((a, b) => b.reportWeight - a.reportWeight || b.cellCount - a.cellCount)[0];
-  return { type: 'MultiPolygon', coordinates: dominant ? [[dominant.ring]] : [] };
+  const ranked = components.sort((a, b) => b.reportWeight - a.reportWeight || b.cellCount - a.cellCount);
+  const minimumWeight = Math.max(3, (ranked[0]?.reportWeight || 0) * 0.012);
+  const retained = ranked.filter((component, index) => index === 0 || (component.cellCount >= 2 && component.reportWeight >= minimumWeight)).slice(0, 18);
+  return { type: 'MultiPolygon', coordinates: retained.map((component) => [component.ring]) };
+}
+
+function reportingGapInterpolation(occupiedCells) {
+  const scores = new Map();
+  occupiedCells.forEach((count, key) => {
+    const [x, y] = key.split(':').map(Number);
+    const strength = Math.min(3.2, Math.log1p(count));
+    for (let dx = -2; dx <= 2; dx += 1) {
+      for (let dy = -2; dy <= 2; dy += 1) {
+        const distanceSquared = dx * dx + dy * dy;
+        if (distanceSquared > 4) continue;
+        const weight = strength * Math.exp(-distanceSquared / 2.2);
+        const neighbor = `${x + dx}:${y + dy}`;
+        scores.set(neighbor, (scores.get(neighbor) || 0) + weight);
+      }
+    }
+  });
+  const interpolated = new Map();
+  scores.forEach((score, key) => {
+    // Repeated nearby evidence can bridge a reporting gap; isolated records
+    // receive only a small local halo and cannot span large empty regions.
+    if (score >= 1.15) interpolated.set(key, Math.max(2, score));
+  });
+  return occurrenceEnvelope(interpolated, { minimumCellCount: 2 });
 }
 
 function transformEnvelope(geometry, yearsAhead, uncertainty = false) {
@@ -242,6 +291,7 @@ function applyOccurrenceDerivedEnvelopes() {
     }
     latestObservedGeometry = occurrenceEnvelope(occupiedCells);
     snapshot.frontGeometry = latestObservedGeometry;
+    snapshot.interpolationGeometry = snapshot.isProjection ? { type: 'MultiPolygon', coordinates: [] } : reportingGapInterpolation(occupiedCells);
     snapshot.cells = String(occupiedCells.size);
     if (!snapshot.isProjection) {
       snapshot.uncertaintyGeometry = { type: 'MultiPolygon', coordinates: [] };
@@ -282,19 +332,99 @@ function smoothClosedRing(ring, iterations = 2) {
   return [...points, points[0]];
 }
 
-function smoothBoundaryGeometry(geometry) {
+function smoothBoundaryGeometry(geometry, iterations = 2) {
   if (!geometry) return geometry;
-  if (geometry.type === 'Polygon') return { ...geometry, coordinates: geometry.coordinates.map((ring) => smoothClosedRing(ring)) };
-  if (geometry.type === 'MultiPolygon') return { ...geometry, coordinates: geometry.coordinates.map((polygon) => polygon.map((ring) => smoothClosedRing(ring))) };
+  if (geometry.type === 'Polygon') return { ...geometry, coordinates: geometry.coordinates.map((ring) => smoothClosedRing(ring, iterations)) };
+  if (geometry.type === 'MultiPolygon') return { ...geometry, coordinates: geometry.coordinates.map((polygon) => polygon.map((ring) => smoothClosedRing(ring, iterations))) };
   return geometry;
 }
 
 applyOccurrenceDerivedEnvelopes();
 
+function selectedModelRanking() {
+  return modelBundle.variants.find((variant) => variant.id === selectedModelId);
+}
+
+function applySelectedProjectionModel() {
+  const selected = modelBundle.models?.[selectedModelId];
+  const ranking = selectedModelRanking();
+  if (!selected || !ranking) return;
+  const forecastFrames = selected.forecastFrames || selected.frames || [];
+  const framesByPeriod = new Map(forecastFrames.map((frame) => [frame.period, frame]));
+  snapshots.forEach((snapshot) => {
+    if (!snapshot.isProjection) return;
+    const frame = framesByPeriod.get(snapshot.period);
+    if (!frame) return;
+    snapshot.frontGeometry = frame.frontGeometry;
+    snapshot.uncertaintyGeometry = frame.uncertaintyGeometry;
+    delete snapshot.frontSmoothGeometry;
+    delete snapshot.uncertaintySmoothGeometry;
+    snapshot.cells = String(frame.occupiedCells);
+    snapshot.confidence = (ranking.score / 100).toFixed(2);
+    snapshot.leadingEdge = `${ranking.id} · ${ranking.name}`;
+    snapshot.modelId = ranking.id;
+    snapshot.modelScore = ranking.score;
+    snapshot.meanDensity = frame.meanDensity;
+  });
+}
+
+applySelectedProjectionModel();
+
+function modelFrame(modelId, snapshot = snapshots[snapshotIndex]) {
+  const model = modelBundle.models?.[modelId];
+  if (!model || !snapshot) return null;
+  const frames = snapshot.isProjection ? (model.forecastFrames || model.frames || []) : (model.backcastFrames || []);
+  return frames.find((frame) => frame.period === snapshot.period);
+}
+
+function modelComparisonData(snapshot = snapshots[snapshotIndex]) {
+  const modelLabVisible = activeSection === 'methods';
+  if (!snapshot || (!modelLabVisible && !forecastSettings.comparisonEnabled)) {
+    return { type: 'FeatureCollection', features: [] };
+  }
+  if (snapshot.isProjection && !forecastSettings.projectionsEnabled) return { type: 'FeatureCollection', features: [] };
+  const comparedIds = forecastSettings.comparisonEnabled ? modelBundle.topFive : [selectedModelId];
+  const features = comparedIds.map((modelId) => {
+    const index = Math.max(0, modelBundle.topFive.indexOf(modelId));
+    const frame = modelFrame(modelId, snapshot);
+    const ranking = modelBundle.variants.find((variant) => variant.id === modelId);
+    if (!frame || !ranking) return null;
+    const geometry = frame.frontSmoothGeometry || (frame.frontSmoothGeometry = smoothBoundaryGeometry(frame.frontGeometry, 3));
+    return {
+      type: 'Feature',
+      geometry,
+      properties: {
+        modelId,
+        name: ranking.name,
+        rank: ranking.rank,
+        score: ranking.score,
+        color: modelColors[index],
+        selected: modelId === selectedModelId ? 1 : 0
+      }
+    };
+  }).filter(Boolean);
+  return { type: 'FeatureCollection', features };
+}
+
+function updateModelComparison() {
+  const source = map?.getSource('lt-model-comparison');
+  if (source) source.setData(modelComparisonData());
+  const legend = $('#model-comparison-legend');
+  if (legend) {
+    legend.classList.toggle('hidden', !forecastSettings.comparisonEnabled);
+    const snapshot = snapshots[snapshotIndex];
+    const phase = legend.querySelector(':scope > div span');
+    const period = legend.querySelector(':scope > div b');
+    if (phase) phase.textContent = snapshot?.isProjection ? 'FORECAST' : 'BACKCAST + REPORTS';
+    if (period) period.textContent = snapshot?.period || 'model frame';
+  }
+}
+
 function sourceData() {
   return {
     front: { type: 'FeatureCollection', features: snapshots.map((snapshot, step) => snapshotGeometryFeature(snapshot, 'front', step)) },
     uncertainty: { type: 'FeatureCollection', features: snapshots.map((snapshot, step) => snapshotGeometryFeature(snapshot, 'uncertainty', step)) },
+    interpolation: { type: 'FeatureCollection', features: snapshots.map((snapshot, step) => snapshotGeometryFeature(snapshot, 'interpolation', step)) },
     reports: reportData(),
     corridors: { type: 'FeatureCollection', features: transportCorridors.map((line, i) => geojsonFeature('LineString', line, { corridor: i + 1 })) },
     sites: { type: 'FeatureCollection', features: sentinelSites.map(([lng, lat, label]) => geojsonFeature('Point', [lng, lat], { label })) }
@@ -306,6 +436,8 @@ function addMapLayers() {
   const observationFilter = ['<=', ['get', 'observedAt'], snapshotCutoff()];
   map.addSource('lt-front', { type: 'geojson', data: { type: 'FeatureCollection', features: [data.front.features[snapshotIndex]] } });
   map.addSource('lt-uncertainty', { type: 'geojson', data: { type: 'FeatureCollection', features: [data.uncertainty.features[snapshotIndex]] } });
+  map.addSource('lt-interpolation', { type: 'geojson', data: { type: 'FeatureCollection', features: [data.interpolation.features[snapshotIndex]] } });
+  map.addSource('lt-model-comparison', { type: 'geojson', data: modelComparisonData() });
   map.addSource('lt-reports', { type: 'geojson', data: data.reports });
   map.addSource('lt-reports-preview', { type: 'geojson', data: reportData(previewObservationPoints) });
   map.addSource('lt-corridors', { type: 'geojson', data: data.corridors });
@@ -328,9 +460,13 @@ function addMapLayers() {
   } });
   map.addLayer({ id: 'lt-uncertainty-fill', type: 'fill', source: 'lt-uncertainty', paint: { 'fill-color': '#2e8f78', 'fill-opacity': 0.22, 'fill-outline-color': '#69dcae' } });
   map.addLayer({ id: 'lt-uncertainty-line', type: 'line', source: 'lt-uncertainty', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#64d9ab', 'line-width': 2, 'line-opacity': 0.58, 'line-blur': 0.25 } });
+  map.addLayer({ id: 'lt-interpolation-fill', type: 'fill', source: 'lt-interpolation', paint: { 'fill-color': '#69b8cf', 'fill-opacity': 0.075 } });
+  map.addLayer({ id: 'lt-interpolation-line', type: 'line', source: 'lt-interpolation', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#7bc6d8', 'line-width': 1.25, 'line-opacity': 0.52, 'line-dasharray': [2, 2] } });
   map.addLayer({ id: 'lt-front-fill', type: 'fill', source: 'lt-front', paint: { 'fill-color': '#229b77', 'fill-opacity': 0.2 } });
   map.addLayer({ id: 'lt-front-line', type: 'line', source: 'lt-front', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#79efb4', 'line-width': 3, 'line-opacity': 0.9, 'line-blur': 0.12 } });
   map.addLayer({ id: 'lt-front-glow', type: 'line', source: 'lt-front', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#3be0a0', 'line-width': 7, 'line-opacity': 0.05, 'line-blur': 4 } });
+  map.addLayer({ id: 'lt-model-comparison-glow', type: 'line', source: 'lt-model-comparison', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': ['case', ['==', ['get', 'selected'], 1], 7, 4], 'line-opacity': 0.08, 'line-blur': 3 } });
+  map.addLayer({ id: 'lt-model-comparison-line', type: 'line', source: 'lt-model-comparison', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': ['case', ['==', ['get', 'selected'], 1], 3.2, 1.8], 'line-opacity': ['case', ['==', ['get', 'selected'], 1], 0.98, 0.74] } });
   map.addLayer({ id: 'lt-corridor-glow', type: 'line', source: 'lt-corridors', paint: { 'line-color': '#b6de6c', 'line-width': ['interpolate', ['linear'], ['zoom'], 2, 8, 7, 12], 'line-opacity': 0.1, 'line-blur': 5 } });
   map.addLayer({ id: 'lt-corridors', type: 'line', source: 'lt-corridors', paint: { 'line-color': '#b7df77', 'line-width': ['interpolate', ['linear'], ['zoom'], 2, 1.3, 7, 2.6], 'line-opacity': 0.7 } });
   map.addLayer({ id: 'lt-corridor-arrows', type: 'symbol', source: 'lt-corridor-flow', layout: { 'text-field': ['get', 'arrow'], 'text-size': ['interpolate', ['linear'], ['zoom'], 2, 11, 7, 16], 'text-allow-overlap': true, 'text-ignore-placement': true }, paint: { 'text-color': '#d9f280', 'text-halo-color': '#173926', 'text-halo-width': 1.1, 'text-opacity': 0.92 } });
@@ -432,7 +568,7 @@ function addMapLayers() {
 }
 
 function setMapLayerVisibility(layer, visible) {
-  const ids = { heatmap: [usingReportPreview ? 'lt-heatmap-preview' : 'lt-heatmap'], reports: [usingReportPreview ? 'lt-reports-preview' : 'lt-reports', ...(usingReportPreview ? [] : ['lt-report-hit'])], front: ['lt-front-fill', 'lt-front-line', 'lt-front-glow'], uncertainty: ['lt-uncertainty-fill', 'lt-uncertainty-line'], corridors: ['lt-corridor-glow', 'lt-corridors', 'lt-corridor-arrows'], sites: ['lt-sites'] };
+  const ids = { heatmap: [usingReportPreview ? 'lt-heatmap-preview' : 'lt-heatmap'], reports: [usingReportPreview ? 'lt-reports-preview' : 'lt-reports', ...(usingReportPreview ? [] : ['lt-report-hit'])], front: ['lt-front-fill', 'lt-front-line', 'lt-front-glow'], interpolation: ['lt-interpolation-fill', 'lt-interpolation-line'], uncertainty: ['lt-uncertainty-fill', 'lt-uncertainty-line'], corridors: ['lt-corridor-glow', 'lt-corridors', 'lt-corridor-arrows'], sites: ['lt-sites'] };
   if (layer === 'heatmap') [usingReportPreview ? 'lt-heatmap' : 'lt-heatmap-preview'].forEach((id) => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none'); });
   if (layer === 'reports') [usingReportPreview ? 'lt-reports' : 'lt-reports-preview', 'lt-report-hit'].forEach((id) => { if (map.getLayer(id) && !ids.reports.includes(id)) map.setLayoutProperty(id, 'visibility', 'none'); });
   (ids[layer] || []).forEach((id) => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none'); });
@@ -471,10 +607,22 @@ function updateSnapshot({ deferReports = false, previewReports = false } = {}) {
   $('#metric-confidence').textContent = snapshot.confidence;
   $('#metric-reports').textContent = reportCount.toLocaleString();
   $('#timeline').value = snapshotIndex;
-  $('#timeline-progress').style.width = `${(snapshotIndex / (snapshots.length - 1)) * 100}%`;
+  $('#timeline-progress').style.width = `${(snapshotIndex / Math.max(timelineMaxIndex(), 1)) * 100}%`;
   if (map && map.getSource('lt-front')) {
     map.getSource('lt-front').setData({ type: 'FeatureCollection', features: [snapshotGeometryFeature(snapshot, 'front')] });
     map.getSource('lt-uncertainty').setData({ type: 'FeatureCollection', features: [snapshotGeometryFeature(snapshot, 'uncertainty')] });
+    map.getSource('lt-interpolation').setData({ type: 'FeatureCollection', features: [snapshotGeometryFeature(snapshot, 'interpolation')] });
+    const evidenceInModelLab = !snapshot.isProjection && activeSection === 'methods';
+    const activeColor = snapshot.isProjection ? modelColor(selectedModelId) : evidenceInModelLab ? '#a8c6b6' : '#79efb4';
+    map.setPaintProperty('lt-front-line', 'line-color', activeColor);
+    map.setPaintProperty('lt-front-line', 'line-width', evidenceInModelLab ? 1.4 : 3);
+    map.setPaintProperty('lt-front-line', 'line-opacity', evidenceInModelLab ? 0.58 : 0.9);
+    map.setPaintProperty('lt-front-fill', 'fill-color', activeColor);
+    map.setPaintProperty('lt-front-fill', 'fill-opacity', evidenceInModelLab ? 0.1 : 0.2);
+    map.setPaintProperty('lt-front-glow', 'line-color', activeColor);
+    map.setPaintProperty('lt-uncertainty-line', 'line-color', activeColor);
+    map.setPaintProperty('lt-uncertainty-fill', 'fill-color', activeColor);
+    updateModelComparison();
     const usePreview = playing || previewReports || isTimelineScrubbing;
     if (!deferReports && (usePreview || !playing || lastReportStep < 0)) {
       const reportFilter = ['<=', ['get', 'observedAt'], snapshotCutoff(snapshot)];
@@ -485,8 +633,91 @@ function updateSnapshot({ deferReports = false, previewReports = false } = {}) {
   }
 }
 
+function renderModelLab() {
+  const ranking = $('#model-ranking');
+  const detail = $('#model-detail');
+  if (!ranking || !detail || !modelBundle.topFive?.length) return;
+  const topFive = modelBundle.topFive.map((id) => modelBundle.variants.find((variant) => variant.id === id)).filter(Boolean);
+  ranking.innerHTML = topFive.map((variant, index) => `
+    <button class="model-choice ${variant.id === selectedModelId ? 'active' : ''}" data-model-id="${variant.id}" style="--active-model:${modelColors[index]}">
+      <span class="model-rank"><i style="--model-color:${modelColors[index]}"></i>#${variant.rank}</span><span class="model-name"><b>${variant.id} · ${variant.name}</b><small>R ${variant.recall.toFixed(3)} · F1 ${variant.f1.toFixed(3)}</small></span><span class="model-score"><strong>${variant.score.toFixed(1)}</strong><i style="--score:${variant.score}%"></i></span>
+    </button>`).join('');
+  const selected = selectedModelRanking();
+  if (selected) {
+    const features = selected.features.length ? selected.features : ['diffusion'];
+    detail.innerHTML = `<div class="model-detail-head"><span>ACTIVE DIFFUSION MODEL</span><b>${selected.id}</b></div><h3>${selected.name}</h3><p>Monthly evidence-assimilating backcast · forecast available in Settings</p><div class="model-feature-list">${features.map((feature) => `<em>${feature}</em>`).join('')}<em>τ ${selected.threshold.toFixed(2)}</em><em>Brier ${selected.brier.toFixed(4)}</em></div>`;
+  }
+  const learned = modelBundle.variants.filter((variant) => variant.features.includes('learned')).sort((a, b) => a.rank - b.rank)[0];
+  const learnedBaseline = modelBundle.variants.find((variant) => variant.id === 'D14');
+  const learnedNote = $('#learned-model-note');
+  if (learned && learnedNote) {
+    const comparison = learnedBaseline && learned.id === 'D18' ? ` · +${(learned.score - learnedBaseline.score).toFixed(1)} vs matched non-learned habitat model` : '';
+    learnedNote.innerHTML = `<span>BEST LEARNED HYBRID</span><b>#${learned.rank} ${learned.id} · ${learned.score.toFixed(1)}</b><small>Neural residual constrained to the diffusion front${comparison}</small>`;
+  }
+  const compareButton = $('#compare-models-inline');
+  if (compareButton) {
+    compareButton.classList.toggle('active', forecastSettings.comparisonEnabled);
+    compareButton.setAttribute('aria-pressed', String(forecastSettings.comparisonEnabled));
+    const stateLabel = compareButton.querySelector('em');
+    if (stateLabel) stateLabel.textContent = forecastSettings.comparisonEnabled ? 'ON' : 'OFF';
+  }
+  const legend = $('#model-comparison-legend');
+  const activeSnapshot = snapshots[snapshotIndex];
+  const phase = activeSnapshot?.isProjection ? 'FORECAST' : 'BACKCAST + REPORTS';
+  if (legend) legend.innerHTML = `<div><span>${phase}</span><b>${activeSnapshot?.period || 'model frame'}</b></div>${topFive.map((variant, index) => `<button data-model-id="${variant.id}" class="${variant.id === selectedModelId ? 'active' : ''}"><i style="--model-color:${modelColors[index]}"></i><span><b>${variant.id}</b><small>#${variant.rank} · ${variant.score.toFixed(1)}</small></span></button>`).join('')}`;
+}
+
+function selectDiffusionModel(modelId) {
+  if (!modelBundle.models?.[modelId]) return;
+  selectedModelId = modelId;
+  applySelectedProjectionModel();
+  renderModelLab();
+  updateSnapshot();
+  map?.easeTo({ center: [-75.2, 41.4], zoom: 4.3, duration: 650 });
+}
+
+function syncForecastSettingsUI() {
+  $('.app-shell').classList.toggle('projections-enabled', forecastSettings.projectionsEnabled);
+  $('.app-shell').classList.toggle('comparison-enabled', forecastSettings.comparisonEnabled);
+  const projections = $('#setting-projections');
+  const comparison = $('#setting-comparison');
+  const uncertainty = $('#setting-uncertainty');
+  if (projections) projections.checked = forecastSettings.projectionsEnabled;
+  if (comparison) comparison.checked = forecastSettings.comparisonEnabled;
+  if (uncertainty) uncertainty.disabled = !forecastSettings.projectionsEnabled;
+  renderTimelineTicks();
+  renderModelLab();
+  updateModelComparison();
+}
+
+function setProjectionEnabled(enabled) {
+  forecastSettings.projectionsEnabled = Boolean(enabled);
+  if (!forecastSettings.projectionsEnabled) {
+    if (snapshotIndex > latestObservedSnapshotIndex) snapshotIndex = latestObservedSnapshotIndex;
+    layers.uncertainty = false;
+    setMapLayerVisibility('uncertainty', false);
+    syncLayerControls();
+  }
+  syncForecastSettingsUI();
+  updateSnapshot();
+}
+
+function setComparisonEnabled(enabled) {
+  forecastSettings.comparisonEnabled = Boolean(enabled);
+  syncForecastSettingsUI();
+  updateSnapshot();
+  if (forecastSettings.comparisonEnabled) map?.easeTo({ center: [-75.2, 41.4], zoom: 4.3, duration: 650 });
+}
+
+function toggleSettingsPanel(force) {
+  const panel = $('#settings-panel');
+  const shouldOpen = typeof force === 'boolean' ? force : panel.classList.contains('hidden');
+  panel.classList.toggle('hidden', !shouldOpen);
+  $('#settings-toggle').setAttribute('aria-expanded', String(shouldOpen));
+}
+
 function initMap() {
-  map = new maplibregl.Map({ container: 'map', style: 'https://tiles.openfreemap.org/styles/dark', center: [-76, 38], zoom: 2.65, maxZoom: 15, minZoom: 1.6, attributionControl: false, dragRotate: false });
+  map = new maplibregl.Map({ container: 'map', style: 'https://tiles.openfreemap.org/styles/dark', center: [-75.5, 40.7], zoom: 4.1, maxZoom: 15, minZoom: 1.6, attributionControl: false, dragRotate: false });
   map.on('styleimagemissing', ({ id }) => {
     if (!id.startsWith('circle-') || map.hasImage(id)) return;
     const size = 32;
@@ -505,7 +736,7 @@ function initMap() {
   });
   map.on('load', () => {
     map.setProjection({ type: 'globe' });
-    map.jumpTo({ center: [-76, 38], zoom: 2.65 });
+    map.jumpTo({ center: [-75.5, 40.7], zoom: 4.1 });
     tintBaseMapDarkGreen();
     updateGlobeAtmosphere();
     addMapLayers();
@@ -600,25 +831,36 @@ function createStarfield() {
 }
 
 function renderTimelineTicks() {
-  $('#timeline-step-count').textContent = snapshots.length;
-  $('#timeline').max = snapshots.length - 1;
-  const years = snapshots.reduce((entries, snapshot, index) => {
+  const maxIndex = timelineMaxIndex();
+  const visibleSnapshots = snapshots.slice(0, maxIndex + 1);
+  $('#timeline-step-count').textContent = visibleSnapshots.length;
+  $('#timeline-mode-label').textContent = forecastSettings.projectionsEnabled ? 'EVIDENCE + FORECAST SCENARIOS' : 'OBSERVED EVIDENCE';
+  $('#timeline').max = maxIndex;
+  const years = visibleSnapshots.reduce((entries, snapshot, index) => {
     if (!entries.some((entry) => entry.year === snapshot.year)) entries.push({ year: snapshot.year, index, isProjection: Boolean(snapshot.isProjection) });
     return entries;
   }, []);
-  $('.timeline-ticks').innerHTML = years.map(({ year, index, isProjection }) => `<span class="year-tick ${isProjection ? 'projection-tick' : ''}" style="left:${(index / (snapshots.length - 1)) * 100}%">${year}</span>`).join('');
-  const firstProjection = snapshots.findIndex((snapshot) => snapshot.isProjection);
-  const evidenceShare = firstProjection === -1 ? 100 : (firstProjection / snapshots.length) * 100;
+  $('.timeline-ticks').innerHTML = years.map(({ year, index, isProjection }) => `<span class="year-tick ${isProjection ? 'projection-tick' : ''}" style="left:${(index / Math.max(maxIndex, 1)) * 100}%">${year}</span>`).join('');
+  const firstProjection = visibleSnapshots.findIndex((snapshot) => snapshot.isProjection);
+  const evidenceShare = firstProjection === -1 ? 100 : (firstProjection / visibleSnapshots.length) * 100;
   $('.timeline-track').style.setProperty('--evidence-share', `${evidenceShare}%`);
+  $('.timeline-regions').innerHTML = forecastSettings.projectionsEnabled
+    ? '<span>OBSERVED EVIDENCE <b>2019–2025</b></span><span>FORECAST SCENARIOS <b>2026–2030</b></span>'
+    : '<span>OBSERVED EVIDENCE <b>2019–2025</b></span>';
+  $('.timeline-regions').classList.toggle('observed-only', !forecastSettings.projectionsEnabled);
+  $('#timeline').value = Math.min(snapshotIndex, maxIndex);
 }
 
 function switchSection(section) {
+  activeSection = section;
   $$('.section-tab').forEach((button) => button.classList.toggle('active', button.dataset.section === section));
   $$('.topbar-section').forEach((button) => button.classList.toggle('active', button.dataset.section === section));
   ['front', 'evidence', 'actions', 'methods'].forEach((name) => $(`#${name}-panel`).classList.toggle('hidden', name !== section));
+  if (map?.getSource('lt-front')) updateSnapshot();
+  else updateModelComparison();
 }
 
-function setSnapshot(index, options) { snapshotIndex = Math.max(0, Math.min(snapshots.length - 1, index)); updateSnapshot(options); }
+function setSnapshot(index, options) { snapshotIndex = Math.max(0, Math.min(timelineMaxIndex(), index)); updateSnapshot(options); }
 
 function stopPlayback() {
   if (!playing) return;
@@ -636,13 +878,13 @@ function togglePlay() {
   if (playing) {
     ensureTimelineOverview();
     setReportPreviewMode(true);
-    if (snapshotIndex >= snapshots.length - 1) setSnapshot(0, { previewReports: true });
+    if (snapshotIndex >= timelineMaxIndex()) setSnapshot(0, { previewReports: true });
     const animate = (timestamp) => {
       if (!playing) return;
       if (!animationLastFrame) animationLastFrame = timestamp;
       if (timestamp - animationLastFrame >= 33) {
         animationLastFrame += 33;
-        if (snapshotIndex >= snapshots.length - 1) {
+        if (snapshotIndex >= timelineMaxIndex()) {
           playing = false;
           $('#timeline-play').textContent = '▶';
           setReportPreviewMode(false);
@@ -663,12 +905,13 @@ function togglePlay() {
 function toggleSidebar() {
   const shell = $('.app-shell');
   const collapsed = shell.classList.toggle('sidebar-collapsed');
-  $$('.menu-button, .topbar-sidebar-icon').forEach((button) => button.setAttribute('aria-expanded', String(!collapsed)));
+  $$('.menu-button, .topbar-sidebar-icon, .collapse').forEach((button) => button.setAttribute('aria-expanded', String(!collapsed)));
+  $('#sidebar-restore').setAttribute('aria-expanded', String(collapsed));
 }
 
 function downloadSnapshot() {
   const snapshot = snapshots[snapshotIndex];
-  const payload = { app: 'LanternTrace Explorer', generatedAt: new Date().toISOString(), snapshot, layers, caveat: 'Prototype illustrative synthesis; not field validation.' };
+  const payload = { app: 'LanternTrace Explorer', generatedAt: new Date().toISOString(), snapshot, selectedModel: selectedModelRanking(), modelMetadata: modelBundle.metadata, layers, caveat: 'Presence-only retrospective prototype; not independent field validation or operational guidance.' };
   const link = document.createElement('a');
   link.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
   link.download = `lanterntrace-front-${snapshot.year}.json`;
@@ -688,7 +931,7 @@ function searchPlace(value) {
 }
 
 function setupInteractions() {
-  $$('.menu-button').forEach((button) => button.addEventListener('click', toggleSidebar));
+  $$('.menu-button, .collapse, #sidebar-restore').forEach((button) => button.addEventListener('click', toggleSidebar));
   $$('.section-tab').forEach((button) => button.addEventListener('click', () => switchSection(button.dataset.section)));
   $$('.topbar-section').forEach((button) => button.addEventListener('click', () => switchSection(button.dataset.section)));
   $$('button[data-layer]').forEach((button) => button.addEventListener('click', () => { const layer = button.dataset.layer; layers[layer] = !layers[layer]; setMapLayerVisibility(layer, layers[layer]); syncLayerControls(); }));
@@ -725,6 +968,19 @@ function setupInteractions() {
   $('#timeline-back').addEventListener('click', () => { ensureTimelineOverview(); setSnapshot(snapshotIndex - 1); });
   $('#timeline-forward').addEventListener('click', () => { ensureTimelineOverview(); setSnapshot(snapshotIndex + 1); });
   $('#timeline-play').addEventListener('click', togglePlay);
+  $('#settings-toggle').addEventListener('click', () => toggleSettingsPanel());
+  $('#settings-close').addEventListener('click', () => toggleSettingsPanel(false));
+  $('#setting-projections').addEventListener('change', (event) => setProjectionEnabled(event.target.checked));
+  $('#setting-comparison').addEventListener('change', (event) => setComparisonEnabled(event.target.checked));
+  $('#compare-models-inline').addEventListener('click', () => setComparisonEnabled(!forecastSettings.comparisonEnabled));
+  $('#model-ranking')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-model-id]');
+    if (button) selectDiffusionModel(button.dataset.modelId);
+  });
+  $('#model-comparison-legend')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-model-id]');
+    if (button) selectDiffusionModel(button.dataset.modelId);
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -734,6 +990,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const evidenceSource = $('#public-observation-source');
   if (evidenceCount) evidenceCount.textContent = count;
   if (evidenceSource) evidenceSource.textContent = `GBIF public-coordinate records · refreshed ${generated}`;
+  syncForecastSettingsUI();
   createStarfield();
   initMap();
   setupInteractions();

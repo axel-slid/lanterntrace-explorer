@@ -1,0 +1,5 @@
+Python 3.13.3
+Tectonic 0.16.9
+Poppler pdftoppm 26.07.0
+Node.js 25.3.0
+npm 11.12.1

@@ -15,7 +15,7 @@
           <button class="topbar-section active" data-section="front">Species<br />Explorer</button>
           <button class="topbar-section" data-section="evidence">Threats<br />&amp; Risks</button>
           <button class="topbar-section" data-section="actions">Priorities<br />&amp; Protections</button>
-          <button class="topbar-section" data-section="methods">Conservation<br />&amp; Solutions</button>
+          <button class="topbar-section" data-section="methods">Diffusion<br />Models</button>
         </nav>
       </header>
       <div class="app-body">
@@ -32,8 +32,8 @@
           <div class="panel-heading"><div><span class="eyebrow">SPECIES &amp; SIGNALS</span><h2>Spotted lanternfly</h2></div><span class="info-dot">i</span></div>
           <div class="layer-row"><button class="switch on" data-layer="heatmap"><span></span></button><div><b>OBSERVATION HEATMAP</b><small>report density &amp; signal intensity</small></div><span class="layer-color heat"></span></div>
           <div class="layer-row"><button class="switch on" data-layer="reports"><span></span></button><div><b>PUBLIC OCCURRENCES</b><small>zoom in to inspect individual reports</small></div><span class="layer-color cyan"></span></div>
-          <div class="layer-row"><button class="switch on" data-layer="front"><span></span></button><div><b>CORE RANGE ENVELOPE</b><small>dominant report cluster; outliers excluded</small></div><span class="layer-color coral"></span></div>
-          <div class="layer-row"><button class="switch on" data-layer="uncertainty"><span></span></button><div><b>PROSPECTIVE ENVELOPE</b><small>future growth scenario only</small></div><span class="layer-color violet"></span></div>
+          <div class="layer-row"><button class="switch on" data-layer="front"><span></span></button><div><b>CORE RANGE ENVELOPE</b><small>higher-density report clusters</small></div><span class="layer-color coral"></span></div>
+          <div class="layer-row"><button class="switch on" data-layer="interpolation"><span></span></button><div><b>REPORTING-GAP INTERPOLATION</b><small>modeled continuity · not observed presence</small></div><span class="layer-color interpolation"></span></div>
           <div class="layer-row"><button class="switch" data-layer="corridors"><span></span></button><div><b>FREIGHT CORRIDORS</b><small>human-mediated pathways</small></div><span class="layer-color orange"></span></div>
           <div class="layer-row"><button class="switch" data-layer="sites"><span></span></button><div><b>SURVEILLANCE SITES</b><small>sentinel network</small></div><span class="layer-color lime"></span></div>
         </section>
@@ -55,15 +55,18 @@
         </section>
 
         <section class="sidebar-content hidden" id="methods-panel">
-          <div class="panel-heading"><div><span class="eyebrow">TRANSPARENCY</span><h2>Methods &amp; model card</h2></div><span class="info-dot">i</span></div>
-          <div class="method-row"><span>Occurrence source</span><b>GBIF public index</b></div>
-          <div class="method-row"><span>Occurrence scope</span><b>U.S. · public coordinates</b></div>
-          <div class="method-row"><span>Occurrence model</span><b>Observation-aware</b></div>
-          <div class="method-row"><span>Observed AUC / AP</span><b>0.8937 / 0.7760</b></div>
-          <div class="method-row"><span>Spatial-only AUC / AP</span><b>0.6028 / 0.4041</b></div>
-          <div class="method-row"><span>Wild field validation</span><b class="orange-text">Not yet demonstrated</b></div>
-          <div class="method-row"><span>Front status</span><b class="orange-text">Illustrative synthesis</b></div>
-          <p class="small-note">Replace the bundled snapshots with locked, versioned, independently reviewed data before making management claims.</p>
+          <div class="panel-heading"><div><span class="eyebrow">PHYSICS + LEARNING</span><h2>Diffusion model lab</h2></div><span class="info-dot">i</span></div>
+          <div class="equation-card"><div><span>REACTION–DIFFUSION ENSEMBLE</span><b>MONTHLY SOLVER · 0.2° GRID</b></div><code>∂u/∂t = ∇·(D∇u) − v·∇u + ru(1−u) + J + εθ</code><small><i>D</i> local spread <i>r</i> growth <i>J</i> transport jumps <i>εθ</i> learned correction</small></div>
+          <div class="model-summary"><span>20 CANDIDATES</span><b>TOP 5 · TEMPORAL BACKTEST</b><small>Train 2014–2021 · rolling evaluation 2021–2025</small></div>
+          <button id="compare-models-inline" class="compare-models-inline" type="button" aria-pressed="false"><span class="compare-icon">≋</span><span><b>Compare all five</b><small>Historical backcasts against true reports</small></span><em>OFF</em></button>
+          <div id="model-ranking" class="model-ranking" aria-label="Top five diffusion models"></div>
+          <div id="model-detail" class="model-detail"></div>
+          <div id="learned-model-note" class="learned-model-note"></div>
+          <div class="method-row"><span>Environmental data</span><b>WorldClim 2.1 + GBIF host records</b></div>
+          <div class="method-row"><span>Sparse reporting</span><b>effort-aware scoring + local interpolation</b></div>
+          <div class="method-row"><span>Playback</span><b>420 backcast + 300 forecast frames</b></div>
+          <div class="method-row"><span>Wild field validation</span><b class="orange-text">Not demonstrated</b></div>
+          <p class="small-note">Scores use presence-only reports and effort-adjusted pseudo-absences. Urban proximity is only a coarse reporting-effort proxy, so rankings compare candidates but do not establish operational forecast skill.</p>
         </section>
 
       </aside>
@@ -73,9 +76,21 @@
         <div class="starfield" aria-hidden="true"></div>
         <div class="map-scrim"></div>
         <header class="map-header">
+          <button id="sidebar-restore" class="sidebar-restore" type="button" aria-label="Show species panel" aria-expanded="false">›</button>
           <div class="location-label"><span class="eyebrow">CURRENT VIEW</span><strong>NORTHEASTERN UNITED STATES</strong></div>
           <div class="map-brand"><span>✦</span><b>LANTERNTRACE<br />PROTECTING<br />THE FRONT</b></div>
+          <button id="settings-toggle" class="map-settings-toggle" type="button" aria-label="Open model display settings" aria-expanded="false">⚙</button>
         </header>
+
+        <section id="settings-panel" class="settings-panel hidden" aria-label="Model display settings">
+          <div class="settings-heading"><div><span class="eyebrow">MAP DISPLAY</span><h3>Model settings</h3></div><button id="settings-close" type="button" aria-label="Close settings">×</button></div>
+          <label class="setting-row"><span><b>Forecast scenarios</b><small>Extend the evidence timeline through 2030</small></span><input id="setting-projections" type="checkbox" /><i></i></label>
+          <label class="setting-row"><span><b>Compare top five</b><small>Overlay models during backcast or forecast playback</small></span><input id="setting-comparison" type="checkbox" /><i></i></label>
+          <label class="setting-row forecast-only"><span><b>Forecast range</b><small>Show the lower-threshold scenario envelope</small></span><input id="setting-uncertainty" type="checkbox" data-layer="uncertainty" /><i></i></label>
+          <p>Historical model playback assimilates reports month by month. Forecasts are disabled on launch and remain explicit scenarios.</p>
+        </section>
+
+        <section id="model-comparison-legend" class="model-comparison-legend hidden" aria-label="Compared diffusion models"></section>
 
         <section class="front-insight">
           <div class="insight-kicker"><span class="pulse"></span> FRONT ESTIMATE <span id="snapshot-label">2025 · LATEST EVIDENCE WINDOW</span></div>
@@ -85,8 +100,8 @@
         </section>
 
         <section class="timeline-dock">
-          <div class="timeline-top"><div><span class="eyebrow">EVIDENCE + PROSPECTIVE FRONT · <span id="timeline-step-count">144</span> MONTHLY STEPS</span><h3>Front progression</h3><span class="timeline-caption">Occurrences follow their recorded dates; prospective growth applies only to the modelled front</span></div><div class="timeline-buttons"><button id="timeline-back" aria-label="Previous timestep">‹</button><button id="timeline-play" aria-label="Play evidence timeline">▶</button><button id="timeline-forward" aria-label="Next timestep">›</button></div><div class="timeline-date"><b id="timeline-year">2030 Dec</b><span id="timeline-phase">projection step</span></div></div>
-          <div class="timeline-track"><div class="timeline-progress" id="timeline-progress"></div><input id="timeline" type="range" min="0" max="143" value="143" step="1" aria-label="Front progression monthly timestep" /><div class="timeline-regions"><span>OBSERVED FRONT <b>2019–2025</b></span><span>PROSPECTIVE GROWTH <b>2026–2030</b></span></div><div class="timeline-ticks"></div></div>
+          <div class="timeline-top"><div><span class="eyebrow"><span id="timeline-mode-label">OBSERVED EVIDENCE</span> · <span id="timeline-step-count">84</span> MONTHLY STEPS</span><h3>Front progression</h3><span class="timeline-caption">Models assimilate dated reports at every historical step; forecasts are Settings-only</span></div><div class="timeline-buttons"><button id="timeline-back" aria-label="Previous timestep">‹</button><button id="timeline-play" aria-label="Play evidence timeline">▶</button><button id="timeline-forward" aria-label="Next timestep">›</button></div><div class="timeline-date"><b id="timeline-year">2025 Dec</b><span id="timeline-phase">evidence step</span></div></div>
+          <div class="timeline-track"><div class="timeline-progress" id="timeline-progress"></div><input id="timeline" type="range" min="0" max="83" value="83" step="1" aria-label="Front progression monthly timestep" /><div class="timeline-regions"><span>OBSERVED EVIDENCE <b>2019–2025</b></span></div><div class="timeline-ticks"></div></div>
         </section>
 
         <div class="map-attribution">Occurrences © GBIF contributors · Basemap © OpenStreetMap contributors · OpenFreeMap</div>
@@ -96,6 +111,7 @@
     <script src="./node_modules/maplibre-gl/dist/maplibre-gl.js"></script>
     <script src="./data.js"></script>
     <script src="./generated/observations.js"></script>
+    <script src="./generated/model-results.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>

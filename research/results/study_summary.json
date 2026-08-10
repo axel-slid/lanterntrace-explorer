@@ -1,0 +1,984 @@
+{
+  "endpoint": "first-reported cells outside the prior-year reported range",
+  "developmentTargets": [
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "frozenTemporalReplay": {
+    "trainingTransitions": "2018-2023",
+    "trainingEndExclusive": 2024,
+    "targets": [
+      2024,
+      2025
+    ],
+    "stateAssimilation": "annual event-date range updated before each target; coefficients and feature specification fixed",
+    "status": "post-hoc lockbox emulation, not preregistered or independent-species validation"
+  },
+  "interimMonitoring": "2026 Jan-Jul retrospective slice",
+  "grid": {
+    "shape": [
+      50,
+      70
+    ],
+    "stepDegrees": 0.2
+  },
+  "recordAccounting": {
+    "rawBundleRecords": 62791,
+    "dated2014Through2026": 62788,
+    "insideRectangle": 60142,
+    "insideCensusAnalysisMask": 57999,
+    "uniqueCellYears": 2484,
+    "uniqueFirstReportCells": 675
+  },
+  "featureNames": [
+    "local_20km",
+    "local_45km",
+    "regional_90km",
+    "regional_160km",
+    "distance_front",
+    "host",
+    "climate",
+    "corridor",
+    "urban",
+    "elevation_barrier",
+    "slope_barrier",
+    "latitude",
+    "longitude",
+    "fisher_risk",
+    "climate_risk",
+    "transport_risk",
+    "full_physics_risk",
+    "reporting_probability"
+  ],
+  "modelParameters": {
+    "grid": "0.2 degree cell centers; metric-adjusted at each latitude; 20 km reference spacing",
+    "boundary": "zero-normal-gradient outer boundary; 2025 Census state mask; predictions clipped to mask",
+    "timeStepMonths": 1.0,
+    "baseDiffusionPerMonth": 0.19,
+    "baseLogisticGrowthPerMonth": 0.13,
+    "corridorConductivityMultiplier": 0.75,
+    "advectionPerMonth": {
+      "north": 0.018,
+      "east": 0.012
+    },
+    "nonlocalGaussianSigmaCells": 4.0,
+    "nonlocalAdditionPerMonth": 0.035,
+    "hazardRegularizationC": 0.08,
+    "positiveWeight": "min(12, sqrt(n_negative / n_positive))",
+    "neighborhoodGaussianSigmaCells": [
+      0.8,
+      1.7,
+      3.4,
+      6.0
+    ],
+    "cook2021Kernel": {
+      "citation": "Cook et al. 2021, doi:10.3897/neobiota.70.67950",
+      "alphaPerKm": 0.045,
+      "transfer": "published county-centroid kernel evaluated at 0.2-degree cell centers"
+    }
+  },
+  "bootstrapReplicates": 2500,
+  "spatialSummaryScope": "development targets 2022-2025; every learned variant leaves each 2-degree block out; geographic-block bootstrap retains repeated years; interim 2026 is separate",
+  "interimMonitoringMetrics": [
+    {
+      "year": 2026,
+      "model": "Transport RD",
+      "positives": 24,
+      "candidates": 1001,
+      "average_precision": 0.202372540418928,
+      "roc_auc": 0.8306465370180826,
+      "recall_at_5pct": 0.2916666666666667
+    },
+    {
+      "year": 2026,
+      "model": "Full mechanistic",
+      "positives": 24,
+      "candidates": 1001,
+      "average_precision": 0.19746011862585156,
+      "roc_auc": 0.8397731149778233,
+      "recall_at_5pct": 0.3333333333333333
+    },
+    {
+      "year": 2026,
+      "model": "Covariate hazard",
+      "positives": 24,
+      "candidates": 1001,
+      "average_precision": 0.17857955784473628,
+      "roc_auc": 0.8436113954281815,
+      "recall_at_5pct": 0.4166666666666667
+    },
+    {
+      "year": 2026,
+      "model": "OG-RDE + transport",
+      "positives": 24,
+      "candidates": 1001,
+      "average_precision": 0.17491460124169428,
+      "roc_auc": 0.839687819856704,
+      "recall_at_5pct": 0.4166666666666667
+    },
+    {
+      "year": 2026,
+      "model": "Fisher-KPP",
+      "positives": 24,
+      "candidates": 1001,
+      "average_precision": 0.17164189278942213,
+      "roc_auc": 0.8309024223814397,
+      "recall_at_5pct": 0.2916666666666667
+    },
+    {
+      "year": 2026,
+      "model": "Climate RD",
+      "positives": 24,
+      "candidates": 1001,
+      "average_precision": 0.16231273817734956,
+      "roc_auc": 0.8310303650631184,
+      "recall_at_5pct": 0.25
+    },
+    {
+      "year": 2026,
+      "model": "OG-RDE",
+      "positives": 24,
+      "candidates": 1001,
+      "average_precision": 0.15811394172115445,
+      "roc_auc": 0.845871716137837,
+      "recall_at_5pct": 0.4583333333333333
+    },
+    {
+      "year": 2026,
+      "model": "OG-RDE + reporting",
+      "positives": 24,
+      "candidates": 1001,
+      "average_precision": 0.1543887910778736,
+      "roc_auc": 0.8459143636983965,
+      "recall_at_5pct": 0.4166666666666667
+    },
+    {
+      "year": 2026,
+      "model": "Cook-2021 kernel",
+      "positives": 24,
+      "candidates": 1001,
+      "average_precision": 0.14472815096259203,
+      "roc_auc": 0.8164022517911975,
+      "recall_at_5pct": 0.25
+    },
+    {
+      "year": 2026,
+      "model": "Reporting surface",
+      "positives": 24,
+      "candidates": 1001,
+      "average_precision": 0.09461322634934498,
+      "roc_auc": 0.7312350733538042,
+      "recall_at_5pct": 0.25
+    },
+    {
+      "year": 2026,
+      "model": "Distance kernel",
+      "positives": 24,
+      "candidates": 1001,
+      "average_precision": 0.05842916985576459,
+      "roc_auc": 0.7803863868986695,
+      "recall_at_5pct": 0.25
+    }
+  ],
+  "summary": [
+    {
+      "model": "OG-RDE + transport",
+      "block_ap_mean": 0.5130808780806292,
+      "block_ap_low": 0.4090437106795274,
+      "block_ap_high": 0.6112540674938296
+    },
+    {
+      "model": "Climate RD",
+      "block_ap_mean": 0.5069894995359712,
+      "block_ap_low": 0.40283161255115296,
+      "block_ap_high": 0.6051792005703983
+    },
+    {
+      "model": "Fisher-KPP",
+      "block_ap_mean": 0.506726431520133,
+      "block_ap_low": 0.40203763682664456,
+      "block_ap_high": 0.603315217812511
+    },
+    {
+      "model": "Covariate hazard",
+      "block_ap_mean": 0.5033834140186298,
+      "block_ap_low": 0.4075839901833084,
+      "block_ap_high": 0.5953746589002262
+    },
+    {
+      "model": "Transport RD",
+      "block_ap_mean": 0.5031710252429126,
+      "block_ap_low": 0.39960287448888965,
+      "block_ap_high": 0.5992962630051629
+    },
+    {
+      "model": "Full mechanistic",
+      "block_ap_mean": 0.5017840944654806,
+      "block_ap_low": 0.3963014597801882,
+      "block_ap_high": 0.6022055429605833
+    },
+    {
+      "model": "Cook-2021 kernel",
+      "block_ap_mean": 0.497405114081546,
+      "block_ap_low": 0.3953832608995851,
+      "block_ap_high": 0.5941483907978927
+    },
+    {
+      "model": "OG-RDE",
+      "block_ap_mean": 0.49705705875033374,
+      "block_ap_low": 0.3999858198322082,
+      "block_ap_high": 0.5919357138226538
+    },
+    {
+      "model": "OG-RDE + reporting",
+      "block_ap_mean": 0.4923851307201317,
+      "block_ap_low": 0.3946373124939381,
+      "block_ap_high": 0.5856555371094437
+    },
+    {
+      "model": "Reporting surface",
+      "block_ap_mean": 0.3487771888263818,
+      "block_ap_low": 0.25210814808531773,
+      "block_ap_high": 0.45287684344420887
+    },
+    {
+      "model": "Distance kernel",
+      "block_ap_mean": 0.33839197369767915,
+      "block_ap_low": 0.2557678259702633,
+      "block_ap_high": 0.4211051893422584
+    }
+  ],
+  "pairedComparisons": [
+    {
+      "reference": "OG-RDE",
+      "competitor": "Distance kernel",
+      "mean_delta_ap": 0.15963711552675877,
+      "delta_low": 0.10977741770767131,
+      "delta_high": 0.21060738865925865,
+      "probability_reference_better": 1.0,
+      "pairedBlockYears": 59,
+      "uniqueGeographicBlocks": 20
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Reporting surface",
+      "mean_delta_ap": 0.14863981498956594,
+      "delta_low": 0.061848495082023815,
+      "delta_high": 0.2395332844511774,
+      "probability_reference_better": 1.0,
+      "pairedBlockYears": 59,
+      "uniqueGeographicBlocks": 20
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "OG-RDE + reporting",
+      "mean_delta_ap": 0.0047596683770086985,
+      "delta_low": -0.000971682895529421,
+      "delta_high": 0.011338509531159108,
+      "probability_reference_better": 0.9352,
+      "pairedBlockYears": 59,
+      "uniqueGeographicBlocks": 20
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Cook-2021 kernel",
+      "mean_delta_ap": -0.00016079013544230595,
+      "delta_low": -0.02725581472414047,
+      "delta_high": 0.025554962406249354,
+      "probability_reference_better": 0.5004,
+      "pairedBlockYears": 59,
+      "uniqueGeographicBlocks": 20
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Full mechanistic",
+      "mean_delta_ap": -0.004544198784947743,
+      "delta_low": -0.029826927338869068,
+      "delta_high": 0.0175936752612366,
+      "probability_reference_better": 0.3696,
+      "pairedBlockYears": 59,
+      "uniqueGeographicBlocks": 20
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Transport RD",
+      "mean_delta_ap": -0.006013512260981613,
+      "delta_low": -0.03378110470185295,
+      "delta_high": 0.021386172526988784,
+      "probability_reference_better": 0.3312,
+      "pairedBlockYears": 59,
+      "uniqueGeographicBlocks": 20
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Covariate hazard",
+      "mean_delta_ap": -0.0063140456470278635,
+      "delta_low": -0.018446731079831254,
+      "delta_high": 0.0015467225826222891,
+      "probability_reference_better": 0.0996,
+      "pairedBlockYears": 59,
+      "uniqueGeographicBlocks": 20
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Fisher-KPP",
+      "mean_delta_ap": -0.009737493551757057,
+      "delta_low": -0.038454163451625153,
+      "delta_high": 0.018660932486862326,
+      "probability_reference_better": 0.2484,
+      "pairedBlockYears": 59,
+      "uniqueGeographicBlocks": 20
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Climate RD",
+      "mean_delta_ap": -0.01007075251827664,
+      "delta_low": -0.04058714105283574,
+      "delta_high": 0.023770699329837577,
+      "probability_reference_better": 0.2552,
+      "pairedBlockYears": 59,
+      "uniqueGeographicBlocks": 20
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "OG-RDE + transport",
+      "mean_delta_ap": -0.01587240388125985,
+      "delta_low": -0.03803806286634854,
+      "delta_high": 0.00018653558058473227,
+      "probability_reference_better": 0.0272,
+      "pairedBlockYears": 59,
+      "uniqueGeographicBlocks": 20
+    }
+  ],
+  "annualPairedComparisons": [
+    {
+      "reference": "OG-RDE",
+      "competitor": "Reporting surface",
+      "mean_delta_ap": 0.287601123610877,
+      "delta_low": 0.27482025074523714,
+      "delta_high": 0.30038199647651675,
+      "completeYears": 4
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Distance kernel",
+      "mean_delta_ap": 0.22480532442446965,
+      "delta_low": 0.20954841497818072,
+      "delta_high": 0.24252113272883924,
+      "completeYears": 4
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Cook-2021 kernel",
+      "mean_delta_ap": 0.03101041845402612,
+      "delta_low": -0.00030944280295713833,
+      "delta_high": 0.06233027971100938,
+      "completeYears": 4
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Full mechanistic",
+      "mean_delta_ap": 0.02665364247415082,
+      "delta_low": 0.00604752387189772,
+      "delta_high": 0.04953937608987678,
+      "completeYears": 4
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Fisher-KPP",
+      "mean_delta_ap": 0.019346357988848803,
+      "delta_low": -0.007361242739200996,
+      "delta_high": 0.047734973610894946,
+      "completeYears": 4
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Transport RD",
+      "mean_delta_ap": 0.01248343800758435,
+      "delta_low": -0.010228517259149944,
+      "delta_high": 0.04308644463413079,
+      "completeYears": 4
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Climate RD",
+      "mean_delta_ap": 0.01182958602771085,
+      "delta_low": -0.013467912193272313,
+      "delta_high": 0.04427773190831823,
+      "completeYears": 4
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "OG-RDE + reporting",
+      "mean_delta_ap": 0.0042060988746652345,
+      "delta_low": -0.0032721269174393747,
+      "delta_high": 0.008060089711466295,
+      "completeYears": 4
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Covariate hazard",
+      "mean_delta_ap": 0.002025396754579134,
+      "delta_low": -0.006112755884933679,
+      "delta_high": 0.014246105234407586,
+      "completeYears": 4
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "OG-RDE + transport",
+      "mean_delta_ap": 0.001733016837625223,
+      "delta_low": -0.016613476154279078,
+      "delta_high": 0.021791801404875383,
+      "completeYears": 4
+    }
+  ],
+  "matchedEndpointComparison": [
+    {
+      "year": 2022,
+      "model": "Transport RD",
+      "endpoint": "cumulative",
+      "positives": 293,
+      "candidates": 1652,
+      "prevalence": 0.17736077481840193,
+      "average_precision": 0.8960477604401208,
+      "normalized_ap_lift": 0.8736356881876965
+    },
+    {
+      "year": 2022,
+      "model": "Transport RD",
+      "endpoint": "first-report frontier",
+      "positives": 109,
+      "candidates": 1468,
+      "prevalence": 0.07425068119891008,
+      "average_precision": 0.5282799493142941,
+      "normalized_ap_lift": 0.49044515496201896
+    },
+    {
+      "year": 2022,
+      "model": "Persistence only",
+      "endpoint": "cumulative",
+      "positives": 293,
+      "candidates": 1652,
+      "prevalence": 0.17736077481840193,
+      "average_precision": 0.6939669776628185,
+      "normalized_ap_lift": 0.6279863481228669
+    },
+    {
+      "year": 2023,
+      "model": "Transport RD",
+      "endpoint": "cumulative",
+      "positives": 402,
+      "candidates": 1652,
+      "prevalence": 0.24334140435835352,
+      "average_precision": 0.9339042012519182,
+      "normalized_ap_lift": 0.9126477923745351
+    },
+    {
+      "year": 2023,
+      "model": "Transport RD",
+      "endpoint": "first-report frontier",
+      "positives": 109,
+      "candidates": 1359,
+      "prevalence": 0.08020603384841796,
+      "average_precision": 0.5452090542684845,
+      "normalized_ap_lift": 0.5055512838006964
+    },
+    {
+      "year": 2023,
+      "model": "Persistence only",
+      "endpoint": "cumulative",
+      "positives": 402,
+      "candidates": 1652,
+      "prevalence": 0.24334140435835352,
+      "average_precision": 0.7948363509329863,
+      "normalized_ap_lift": 0.7288557213930348
+    },
+    {
+      "year": 2024,
+      "model": "Transport RD",
+      "endpoint": "cumulative",
+      "positives": 512,
+      "candidates": 1652,
+      "prevalence": 0.3099273607748184,
+      "average_precision": 0.9442014638410339,
+      "normalized_ap_lift": 0.919141068653849
+    },
+    {
+      "year": 2024,
+      "model": "Transport RD",
+      "endpoint": "first-report frontier",
+      "positives": 110,
+      "candidates": 1250,
+      "prevalence": 0.088,
+      "average_precision": 0.4778478961058689,
+      "normalized_ap_lift": 0.4274647983616983
+    },
+    {
+      "year": 2024,
+      "model": "Persistence only",
+      "endpoint": "cumulative",
+      "positives": 512,
+      "candidates": 1652,
+      "prevalence": 0.3099273607748184,
+      "average_precision": 0.8517422064164649,
+      "normalized_ap_lift": 0.78515625
+    },
+    {
+      "year": 2025,
+      "model": "Transport RD",
+      "endpoint": "cumulative",
+      "positives": 651,
+      "candidates": 1652,
+      "prevalence": 0.3940677966101695,
+      "average_precision": 0.9523682526854499,
+      "normalized_ap_lift": 0.9213909624738895
+    },
+    {
+      "year": 2025,
+      "model": "Transport RD",
+      "endpoint": "first-report frontier",
+      "positives": 139,
+      "candidates": 1140,
+      "prevalence": 0.12192982456140351,
+      "average_precision": 0.48180727223693887,
+      "normalized_ap_lift": 0.40985043991020015
+    },
+    {
+      "year": 2025,
+      "model": "Persistence only",
+      "endpoint": "cumulative",
+      "positives": 651,
+      "candidates": 1652,
+      "prevalence": 0.3940677966101695,
+      "average_precision": 0.8706227707047828,
+      "normalized_ap_lift": 0.7864823348694318
+    }
+  ],
+  "numericalSensitivity": [
+    {
+      "year": 2025,
+      "model": "Transport RD",
+      "stepMonths": 1.0,
+      "average_precision": 0.48180727223693887,
+      "spearmanVsMonthly": 1.0,
+      "meanAbsoluteDifference": 0.0
+    },
+    {
+      "year": 2025,
+      "model": "Transport RD",
+      "stepMonths": 0.5,
+      "average_precision": 0.48236455650937937,
+      "spearmanVsMonthly": 0.9999801639218188,
+      "meanAbsoluteDifference": 0.002488181853800119
+    },
+    {
+      "year": 2025,
+      "model": "Transport RD",
+      "stepMonths": 0.25,
+      "average_precision": 0.48147118027562213,
+      "spearmanVsMonthly": 0.9999567477919608,
+      "meanAbsoluteDifference": 0.0037529273179905884
+    },
+    {
+      "year": 2025,
+      "model": "Full mechanistic",
+      "stepMonths": 1.0,
+      "average_precision": 0.47757791274199396,
+      "spearmanVsMonthly": 1.0,
+      "meanAbsoluteDifference": 0.0
+    },
+    {
+      "year": 2025,
+      "model": "Full mechanistic",
+      "stepMonths": 0.5,
+      "average_precision": 0.4776577102347087,
+      "spearmanVsMonthly": 0.9999887900644334,
+      "meanAbsoluteDifference": 0.0007887655267082768
+    },
+    {
+      "year": 2025,
+      "model": "Full mechanistic",
+      "stepMonths": 0.25,
+      "average_precision": 0.4777974507762279,
+      "spearmanVsMonthly": 0.9999789975701412,
+      "meanAbsoluteDifference": 0.0011735330453335753
+    }
+  ],
+  "parameterSensitivity": [
+    {
+      "family": "Transport RD",
+      "parameter": "diffusion",
+      "value": 0.75,
+      "year": 2025,
+      "average_precision": 0.4832331632014258
+    },
+    {
+      "family": "Transport RD",
+      "parameter": "diffusion",
+      "value": 1.0,
+      "year": 2025,
+      "average_precision": 0.48180727223693887
+    },
+    {
+      "family": "Transport RD",
+      "parameter": "diffusion",
+      "value": 1.25,
+      "year": 2025,
+      "average_precision": 0.4819729405928644
+    },
+    {
+      "family": "Transport RD",
+      "parameter": "growth",
+      "value": 0.75,
+      "year": 2025,
+      "average_precision": 0.48235471780363115
+    },
+    {
+      "family": "Transport RD",
+      "parameter": "growth",
+      "value": 1.0,
+      "year": 2025,
+      "average_precision": 0.48180727223693887
+    },
+    {
+      "family": "Transport RD",
+      "parameter": "growth",
+      "value": 1.25,
+      "year": 2025,
+      "average_precision": 0.48081446595572175
+    },
+    {
+      "family": "Transport RD",
+      "parameter": "jump",
+      "value": 0.75,
+      "year": 2025,
+      "average_precision": 0.4817365017570543
+    },
+    {
+      "family": "Transport RD",
+      "parameter": "jump",
+      "value": 1.0,
+      "year": 2025,
+      "average_precision": 0.48180727223693887
+    },
+    {
+      "family": "Transport RD",
+      "parameter": "jump",
+      "value": 1.25,
+      "year": 2025,
+      "average_precision": 0.4797708229912579
+    },
+    {
+      "family": "OG-RDE",
+      "parameter": "C=0.03; cap=6",
+      "value": 0.03,
+      "year": "2022-2025 mean",
+      "average_precision": 0.5213613753651619
+    },
+    {
+      "family": "OG-RDE",
+      "parameter": "C=0.03; cap=12",
+      "value": 0.03,
+      "year": "2022-2025 mean",
+      "average_precision": 0.5213334523757693
+    },
+    {
+      "family": "OG-RDE",
+      "parameter": "C=0.08; cap=6",
+      "value": 0.08,
+      "year": "2022-2025 mean",
+      "average_precision": 0.521052233552325
+    },
+    {
+      "family": "OG-RDE",
+      "parameter": "C=0.08; cap=12",
+      "value": 0.08,
+      "year": "2022-2025 mean",
+      "average_precision": 0.520769480988981
+    },
+    {
+      "family": "OG-RDE",
+      "parameter": "C=0.2; cap=6",
+      "value": 0.2,
+      "year": "2022-2025 mean",
+      "average_precision": 0.5200961518744647
+    },
+    {
+      "family": "OG-RDE",
+      "parameter": "C=0.2; cap=12",
+      "value": 0.2,
+      "year": "2022-2025 mean",
+      "average_precision": 0.5195207319941755
+    }
+  ],
+  "frozenTemporalMetrics": [
+    {
+      "year": 2024,
+      "model": "Distance kernel",
+      "positives": 110,
+      "candidates": 1250,
+      "average_precision": 0.2753177100910622,
+      "roc_auc": 0.8418580542264753,
+      "recall_at_5pct": 0.2
+    },
+    {
+      "year": 2024,
+      "model": "Cook-2021 kernel",
+      "positives": 110,
+      "candidates": 1250,
+      "average_precision": 0.43532236977501365,
+      "roc_auc": 0.8609888357256779,
+      "recall_at_5pct": 0.2818181818181818
+    },
+    {
+      "year": 2024,
+      "model": "Fisher-KPP",
+      "positives": 110,
+      "candidates": 1250,
+      "average_precision": 0.4638341504997694,
+      "roc_auc": 0.867543859649123,
+      "recall_at_5pct": 0.3
+    },
+    {
+      "year": 2024,
+      "model": "Climate RD",
+      "positives": 110,
+      "candidates": 1250,
+      "average_precision": 0.4690286929679064,
+      "roc_auc": 0.8684609250398725,
+      "recall_at_5pct": 0.2909090909090909
+    },
+    {
+      "year": 2024,
+      "model": "Transport RD",
+      "positives": 110,
+      "candidates": 1250,
+      "average_precision": 0.4778478961058689,
+      "roc_auc": 0.8706539074960128,
+      "recall_at_5pct": 0.3181818181818182
+    },
+    {
+      "year": 2024,
+      "model": "Full mechanistic",
+      "positives": 110,
+      "candidates": 1250,
+      "average_precision": 0.4455702347196303,
+      "roc_auc": 0.8636921850079744,
+      "recall_at_5pct": 0.3090909090909091
+    },
+    {
+      "year": 2024,
+      "model": "Covariate hazard",
+      "positives": 110,
+      "candidates": 1250,
+      "average_precision": 0.4866701572119878,
+      "roc_auc": 0.879712918660287,
+      "recall_at_5pct": 0.3181818181818182
+    },
+    {
+      "year": 2024,
+      "model": "OG-RDE",
+      "positives": 110,
+      "candidates": 1250,
+      "average_precision": 0.47869375874504383,
+      "roc_auc": 0.8799441786283893,
+      "recall_at_5pct": 0.32727272727272727
+    },
+    {
+      "year": 2025,
+      "model": "Distance kernel",
+      "positives": 139,
+      "candidates": 1140,
+      "average_precision": 0.28751932766506255,
+      "roc_auc": 0.8057266474532662,
+      "recall_at_5pct": 0.08633093525179857
+    },
+    {
+      "year": 2025,
+      "model": "Cook-2021 kernel",
+      "positives": 139,
+      "candidates": 1140,
+      "average_precision": 0.4576847404173997,
+      "roc_auc": 0.8668381977734495,
+      "recall_at_5pct": 0.18705035971223022
+    },
+    {
+      "year": 2025,
+      "model": "Fisher-KPP",
+      "positives": 139,
+      "candidates": 1140,
+      "average_precision": 0.48028048213661984,
+      "roc_auc": 0.8530677955138387,
+      "recall_at_5pct": 0.2158273381294964
+    },
+    {
+      "year": 2025,
+      "model": "Climate RD",
+      "positives": 139,
+      "candidates": 1140,
+      "average_precision": 0.4798345386446426,
+      "roc_auc": 0.8542464729515089,
+      "recall_at_5pct": 0.2158273381294964
+    },
+    {
+      "year": 2025,
+      "model": "Transport RD",
+      "positives": 139,
+      "candidates": 1140,
+      "average_precision": 0.48180727223693887,
+      "roc_auc": 0.8557988773816112,
+      "recall_at_5pct": 0.23741007194244604
+    },
+    {
+      "year": 2025,
+      "model": "Full mechanistic",
+      "positives": 139,
+      "candidates": 1140,
+      "average_precision": 0.47757791274199396,
+      "roc_auc": 0.8446230028963841,
+      "recall_at_5pct": 0.2589928057553957
+    },
+    {
+      "year": 2025,
+      "model": "Covariate hazard",
+      "positives": 139,
+      "candidates": 1140,
+      "average_precision": 0.5212005085571512,
+      "roc_auc": 0.8689799409223868,
+      "recall_at_5pct": 0.2517985611510791
+    },
+    {
+      "year": 2025,
+      "model": "OG-RDE",
+      "positives": 139,
+      "candidates": 1140,
+      "average_precision": 0.5146683000207758,
+      "roc_auc": 0.8685127821818469,
+      "recall_at_5pct": 0.23741007194244604
+    }
+  ],
+  "frozenBootstrapSummary": [
+    {
+      "model": "Transport RD",
+      "block_ap_mean": 0.5338929842534818,
+      "block_ap_low": 0.3997966304811659,
+      "block_ap_high": 0.663053125338251
+    },
+    {
+      "model": "Climate RD",
+      "block_ap_mean": 0.5334527361369619,
+      "block_ap_low": 0.40045070122991294,
+      "block_ap_high": 0.6626757483223908
+    },
+    {
+      "model": "Fisher-KPP",
+      "block_ap_mean": 0.5307746049138931,
+      "block_ap_low": 0.3965049396547901,
+      "block_ap_high": 0.6603981427308719
+    },
+    {
+      "model": "Full mechanistic",
+      "block_ap_mean": 0.5219940169202051,
+      "block_ap_low": 0.3871468130196238,
+      "block_ap_high": 0.6522710090506308
+    },
+    {
+      "model": "Cook-2021 kernel",
+      "block_ap_mean": 0.5176623418797998,
+      "block_ap_low": 0.3860665576862372,
+      "block_ap_high": 0.6478026597189306
+    },
+    {
+      "model": "Covariate hazard",
+      "block_ap_mean": 0.5091878067909172,
+      "block_ap_low": 0.3889140562231954,
+      "block_ap_high": 0.6246164220914847
+    },
+    {
+      "model": "OG-RDE",
+      "block_ap_mean": 0.4928150337504232,
+      "block_ap_low": 0.36909815446970123,
+      "block_ap_high": 0.612267101043792
+    },
+    {
+      "model": "Distance kernel",
+      "block_ap_mean": 0.35657838678435194,
+      "block_ap_low": 0.2482582689099815,
+      "block_ap_high": 0.4739316106706908
+    }
+  ],
+  "frozenPairedComparisons": [
+    {
+      "reference": "OG-RDE",
+      "competitor": "Distance kernel",
+      "mean_delta_ap": 0.13635569919976917,
+      "delta_low": 0.08112086700213904,
+      "delta_high": 0.1996905617560431,
+      "probability_reference_better": 1.0,
+      "pairedBlockYears": 31,
+      "uniqueGeographicBlocks": 17
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Covariate hazard",
+      "mean_delta_ap": -0.016164885519049866,
+      "delta_low": -0.04366303505423142,
+      "delta_high": 0.0004293893000309489,
+      "probability_reference_better": 0.0364,
+      "pairedBlockYears": 31,
+      "uniqueGeographicBlocks": 17
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Cook-2021 kernel",
+      "mean_delta_ap": -0.02511968605678677,
+      "delta_low": -0.06385750867718228,
+      "delta_high": 0.007025756892514024,
+      "probability_reference_better": 0.0724,
+      "pairedBlockYears": 31,
+      "uniqueGeographicBlocks": 17
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Full mechanistic",
+      "mean_delta_ap": -0.02933677525058288,
+      "delta_low": -0.07101736478583262,
+      "delta_high": 0.005565621737067026,
+      "probability_reference_better": 0.0588,
+      "pairedBlockYears": 31,
+      "uniqueGeographicBlocks": 17
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Fisher-KPP",
+      "mean_delta_ap": -0.03822349051803543,
+      "delta_low": -0.07864933182361218,
+      "delta_high": -0.004399857853774634,
+      "probability_reference_better": 0.0128,
+      "pairedBlockYears": 31,
+      "uniqueGeographicBlocks": 17
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Climate RD",
+      "mean_delta_ap": -0.04085432331540518,
+      "delta_low": -0.08061998683353667,
+      "delta_high": -0.009426938843034726,
+      "probability_reference_better": 0.0012,
+      "pairedBlockYears": 31,
+      "uniqueGeographicBlocks": 17
+    },
+    {
+      "reference": "OG-RDE",
+      "competitor": "Transport RD",
+      "mean_delta_ap": -0.04130572717753322,
+      "delta_low": -0.0808254218029078,
+      "delta_high": -0.009668804363633359,
+      "probability_reference_better": 0.0,
+      "pairedBlockYears": 31,
+      "uniqueGeographicBlocks": 17
+    }
+  ]
+}

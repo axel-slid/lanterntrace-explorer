@@ -1,0 +1,37 @@
+{
+  "occurrenceMetadata": {
+    "source": "GBIF occurrence API",
+    "sourceUrl": "https://www.gbif.org/species/5157899",
+    "scientificName": "Lycorma delicatula (White, 1845)",
+    "taxonKey": "5157899",
+    "country": "United States",
+    "filters": "hasCoordinate=true; hasGeospatialIssue=false; occurrenceStatus=PRESENT",
+    "generatedAt": "2026-08-02T11:08:56.135Z",
+    "sourceCount": 62803,
+    "count": 62791,
+    "datedCount": 62789,
+    "excludedUndatedCount": 12
+  },
+  "analysisAccounting": {
+    "rawBundleRecords": 62791,
+    "dated2014Through2026": 62788,
+    "insideRectangle": 60142,
+    "insideCensusAnalysisMask": 57999,
+    "uniqueCellYears": 2484,
+    "uniqueFirstReportCells": 675
+  },
+  "censusBoundary": {
+    "vintage": 2025,
+    "url": "https://www2.census.gov/geo/tiger/GENZ2025/kml/cb_2025_us_state_500k.zip"
+  },
+  "sha256": {
+    "occurrenceBundle": "cd49571c4d8cd326e8ccd9739bac6ba6e0d860ebfd399af253c99f72cdc27527",
+    "hostCache": "f00b6bde366d35c2bb6e0b6177174938fafaa8351a308181c2acec0d07e41238",
+    "censusStateBoundary": "4295a503ff47e6787adfb520ad6706557e41c2ce57ced5a134087f8e35143a02",
+    "worldclimElevation": "6a9f4e9a37f289d594ed1567b63be344a4dacf247f0b69756e81df031087e3bd",
+    "worldclimBioclim": "00513224583665ec0f2f955a4ec252730c4deb2004cce9e793492a3f26df4dcf",
+    "studyScript": "cc76aa43ad290770611ca3b95e94697d0853ad71ec0585d316b623852a2e6289",
+    "solverScript": "9e4213cebd9b6676a36c6f32d3dd58480721d41544b0da4f1fd4f455a4789165"
+  },
+  "limitation": "Historical origins are reconstructed by event date from a 2026 snapshot; record availability timestamps and time-versioned host covariates are unavailable."
+}
