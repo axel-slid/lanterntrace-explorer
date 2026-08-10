@@ -14,6 +14,8 @@ let benchmarkComparisonEnabled = false;
 const layers = { heatmap: true, reports: true, front: true, interpolation: true, uncertainty: false, corridors: false, sites: false };
 const latestObservedSnapshotIndex = snapshots.reduce((latest, snapshot, index) => snapshot.isProjection ? latest : index, 0);
 const forecastSettings = { projectionsEnabled: false, comparisonEnabled: false };
+const PLAYBACK_INTERVAL_MS = 120;
+const REDUCED_MOTION_PLAYBACK_INTERVAL_MS = 500;
 const modelColors = ['#78efb5', '#f2c96d', '#73b9ff', '#dd91f3', '#ff907d'];
 const benchmarkColors = {
   covariate_hazard: '#73c9d5', og_rde: '#78efb5', transport_rd: '#f2c96d', climate_rd: '#73b9ff',
@@ -1178,7 +1180,9 @@ function togglePlay() {
     const animate = (timestamp) => {
       if (!playing) return;
       if (!animationLastFrame) animationLastFrame = timestamp;
-      const interval = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 650 : 330;
+      const interval = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? REDUCED_MOTION_PLAYBACK_INTERVAL_MS
+        : PLAYBACK_INTERVAL_MS;
       if (timestamp - animationLastFrame >= interval) {
         animationLastFrame += interval;
         if (snapshotIndex >= timelineMaxIndex()) {
