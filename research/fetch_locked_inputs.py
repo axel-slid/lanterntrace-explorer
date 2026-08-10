@@ -6,6 +6,8 @@ from __future__ import annotations
 import hashlib
 import json
 import pathlib
+import shutil
+import subprocess
 import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -25,6 +27,39 @@ def sha256(path: pathlib.Path) -> str:
     return digest.hexdigest()
 
 
+def download(url: str, target: pathlib.Path) -> None:
+    """Download with the platform CA-aware curl when available.
+
+    The python.org macOS installer does not automatically inherit the system
+    trust store, so urllib can fail on an otherwise healthy HTTPS endpoint.
+    curl uses the platform trust configuration and is present on supported
+    macOS and CI environments. urllib remains a portable fallback.
+    """
+    curl = shutil.which("curl")
+    if curl:
+        subprocess.run(
+            [
+                curl,
+                "--fail",
+                "--location",
+                "--retry",
+                "3",
+                "--retry-all-errors",
+                "--user-agent",
+                "LanternTrace research artifact",
+                "--output",
+                str(target),
+                url,
+            ],
+            check=True,
+        )
+        return
+    request = urllib.request.Request(url, headers={"User-Agent": "LanternTrace research artifact"})
+    with urllib.request.urlopen(request, timeout=240) as response, target.open("wb") as handle:
+        while chunk := response.read(1024 * 1024):
+            handle.write(chunk)
+
+
 for relative, metadata in LOCK.items():
     target = ROOT / relative
     if target.exists():
@@ -38,10 +73,7 @@ for relative, metadata in LOCK.items():
     target.parent.mkdir(parents=True, exist_ok=True)
     temporary = target.with_suffix(target.suffix + ".download")
     print(f"fetching {relative}")
-    request = urllib.request.Request(url, headers={"User-Agent": "LanternTrace research artifact"})
-    with urllib.request.urlopen(request, timeout=240) as response, temporary.open("wb") as handle:
-        while chunk := response.read(1024 * 1024):
-            handle.write(chunk)
+    download(url, temporary)
     if sha256(temporary) != metadata["sha256"]:
         temporary.unlink(missing_ok=True)
         raise SystemExit(f"Downloaded input failed checksum: {relative}")

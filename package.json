@@ -1,6 +1,6 @@
 {
   "name": "lanterntrace-explorer",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Electron prototype for exploring spotted lanternfly invasion-front evidence.",
   "author": "LanternTrace Explorer contributors",
   "main": "main.js",
@@ -26,16 +26,23 @@
     "appId": "org.lanterntrace.explorer",
     "productName": "LanternTrace Explorer",
     "icon": "assets/icon.icns",
-    "asarUnpack": ["output/pdf/*.pdf"],
+    "asarUnpack": [
+      "output/pdf/*.pdf"
+    ],
     "files": [
-      "**/*",
-      "!node_modules/.cache/**/*",
-      "!research/**/*",
-      "!.model-cache/**/*",
-      "!generated/observations.js",
-      "!docs/**/*",
-      "!dist/**/*",
-      "!.github/**/*"
+      "package.json",
+      "main.js",
+      "preload.js",
+      "index.html",
+      "app.js",
+      "data.js",
+      "styles.css",
+      "assets/**/*",
+      "!assets/lanternfly-cutout-source.png",
+      "generated/model-results.js",
+      "generated/frozen-benchmark.js",
+      "output/pdf/lanterntrace-frontier-forecasting.pdf",
+      "node_modules/**/*"
     ]
   }
 }

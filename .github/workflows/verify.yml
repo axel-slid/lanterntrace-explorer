@@ -18,3 +18,13 @@ jobs:
           python-version: "3.13"
       - run: npm ci
       - run: npm run verify:release
+      - name: Fetch and verify locked upstream archives
+        run: python3 research/fetch_locked_inputs.py
+      - name: Install locked scientific dependencies
+        run: python3 -m pip install -r research/requirements-lock.txt
+      - name: Rebuild frozen analysis from locked inputs
+        run: |
+          python3 -m unittest -v research.test_study
+          python3 research/run_sota_study.py
+          python3 research/verify_artifacts.py
+          git diff --exit-code -- generated/frozen-benchmark.js research/results research/figures

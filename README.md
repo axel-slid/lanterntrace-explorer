@@ -25,7 +25,7 @@ npm run model:build
 npm start
 ```
 
-`npm run data:gbif` is available only when intentionally refreshing to the current GBIF index; it does not recreate the locked 2 August 2026 snapshot. Exact reproduction uses the committed occurrence and host snapshots, downloads the three immutable Census/WorldClim archives, and verifies all five hashes in `research/input-lock.json`. Tectonic and Poppler (`pdfinfo`, `pdftotext`, `pdftoppm`) are required to rebuild and inspect the paper.
+`npm run data:gbif` is available only when intentionally refreshing to the current GBIF index; it does not recreate the locked 2 August 2026 snapshot. Exact reproduction uses the committed occurrence and host snapshots, downloads the three immutable Census/WorldClim archives with platform-CA-aware `curl`, and verifies all five hashes in `research/input-lock.json`. Tectonic and Poppler (`pdfinfo`, `pdftotext`, `pdftoppm`) are required to rebuild and inspect the paper. Public CI repeats archive retrieval, all scientific tests, the frozen analysis rebuild, and artifact-drift checks from a clean checkout.
 
 ## What is included
 
