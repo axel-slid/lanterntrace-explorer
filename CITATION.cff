@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use LanternTrace Explorer, cite this software and the accompanying technical report."
+title: "LanternTrace Explorer: a frozen first-report benchmark for invasion-front forecasting"
+type: software
+authors:
+  - family-names: "Dils"
+    given-names: "Alex Arthur"
+version: 0.2.0
+date-released: 2026-08-10
+repository-code: "https://github.com/axel-slid/lanterntrace-explorer"
+url: "https://github.com/axel-slid/lanterntrace-explorer"
+abstract: "An interactive spotted-lanternfly explorer and reproducible benchmark contrasting cumulative-map scoring with frozen first-report replay."
+keywords:
+  - invasive species
+  - spotted lanternfly
+  - reaction-diffusion
+  - temporal validation
+  - presence-only data

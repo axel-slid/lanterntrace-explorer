@@ -4,12 +4,22 @@ const observationPoints = observationBundle.observations;
 const observationMetadata = observationBundle.metadata;
 const previewObservationPoints = observationPoints.filter((_, index) => index % 20 === 0);
 const modelBundle = window.LanternTraceModels || { metadata: {}, variants: [], topFive: [], models: {} };
+const benchmarkBundle = window.LanternTraceBenchmark || { metadata: {}, models: [], years: {} };
 let selectedModelId = modelBundle.defaultModel || modelBundle.topFive?.[0] || null;
+let selectedBenchmarkModelId = benchmarkBundle.models.find((model) => model.id === 'covariate_hazard')?.id || benchmarkBundle.models[0]?.id || null;
+let benchmarkYear = 2025;
+let activeLabMode = 'benchmark';
+let benchmarkComparisonEnabled = false;
 
-const layers = { heatmap: true, reports: true, front: true, interpolation: true, uncertainty: false, corridors: true, sites: false };
+const layers = { heatmap: true, reports: true, front: true, interpolation: true, uncertainty: false, corridors: false, sites: false };
 const latestObservedSnapshotIndex = snapshots.reduce((latest, snapshot, index) => snapshot.isProjection ? latest : index, 0);
 const forecastSettings = { projectionsEnabled: false, comparisonEnabled: false };
 const modelColors = ['#78efb5', '#f2c96d', '#73b9ff', '#dd91f3', '#ff907d'];
+const benchmarkColors = {
+  covariate_hazard: '#73c9d5', og_rde: '#78efb5', transport_rd: '#f2c96d', climate_rd: '#73b9ff',
+  fisher_kpp: '#a8d98b', full_mechanistic: '#d79b70', cook_2021_kernel: '#b18be3', distance_kernel: '#9ca8a2'
+};
+const benchmarkComparisonIds = ['covariate_hazard', 'og_rde', 'transport_rd', 'cook_2021_kernel'];
 let snapshotIndex = latestObservedSnapshotIndex;
 let activeSection = 'front';
 let map;
@@ -24,6 +34,8 @@ let isTimelineScrubbing = false;
 let corridorAnimationFrame;
 let corridorAnimationLast = 0;
 let usingReportPreview = false;
+let settingsReturnFocus = null;
+let mapLayersAdded = false;
 const timelineOverviewZoom = 4.75;
 
 function timelineMaxIndex() {
@@ -103,8 +115,10 @@ function corridorFlowData(phase = 0) {
 
 function startCorridorAnimation() {
   cancelAnimationFrame(corridorAnimationFrame);
+  if (!map || document.hidden || !layers.corridors || benchmarkActive()) return;
   const animate = (timestamp) => {
-    if (layers.corridors && timestamp - corridorAnimationLast >= (playing || isTimelineScrubbing ? 33 : 90)) {
+    if (document.hidden || !layers.corridors || benchmarkActive()) return;
+    if (timestamp - corridorAnimationLast >= (playing || isTimelineScrubbing ? 90 : 180)) {
       const source = map?.getSource('lt-corridor-flow');
       if (source) source.setData(corridorFlowData((timestamp / 10500) % 1));
       corridorAnimationLast = timestamp;
@@ -332,7 +346,7 @@ function smoothClosedRing(ring, iterations = 2) {
   return [...points, points[0]];
 }
 
-function smoothBoundaryGeometry(geometry, iterations = 2) {
+function smoothBoundaryGeometry(geometry, iterations = 4) {
   if (!geometry) return geometry;
   if (geometry.type === 'Polygon') return { ...geometry, coordinates: geometry.coordinates.map((ring) => smoothClosedRing(ring, iterations)) };
   if (geometry.type === 'MultiPolygon') return { ...geometry, coordinates: geometry.coordinates.map((polygon) => polygon.map((ring) => smoothClosedRing(ring, iterations))) };
@@ -360,8 +374,8 @@ function applySelectedProjectionModel() {
     delete snapshot.frontSmoothGeometry;
     delete snapshot.uncertaintySmoothGeometry;
     snapshot.cells = String(frame.occupiedCells);
-    snapshot.confidence = (ranking.score / 100).toFixed(2);
-    snapshot.leadingEdge = `${ranking.id} · ${ranking.name}`;
+    snapshot.confidence = 'NOT CALIBRATED';
+    snapshot.leadingEdge = `Scenario · ${ranking.id} · ${ranking.name}`;
     snapshot.modelId = ranking.id;
     snapshot.modelScore = ranking.score;
     snapshot.meanDensity = frame.meanDensity;
@@ -378,7 +392,7 @@ function modelFrame(modelId, snapshot = snapshots[snapshotIndex]) {
 }
 
 function modelComparisonData(snapshot = snapshots[snapshotIndex]) {
-  const modelLabVisible = activeSection === 'methods';
+  const modelLabVisible = activeSection === 'methods' && activeLabMode === 'scenario';
   if (!snapshot || (!modelLabVisible && !forecastSettings.comparisonEnabled)) {
     return { type: 'FeatureCollection', features: [] };
   }
@@ -411,13 +425,214 @@ function updateModelComparison() {
   if (source) source.setData(modelComparisonData());
   const legend = $('#model-comparison-legend');
   if (legend) {
-    legend.classList.toggle('hidden', !forecastSettings.comparisonEnabled);
+    legend.classList.toggle('hidden', !forecastSettings.comparisonEnabled || benchmarkActive());
     const snapshot = snapshots[snapshotIndex];
     const phase = legend.querySelector(':scope > div span');
     const period = legend.querySelector(':scope > div b');
     if (phase) phase.textContent = snapshot?.isProjection ? 'FORECAST' : 'BACKCAST + REPORTS';
     if (period) period.textContent = snapshot?.period || 'model frame';
   }
+}
+
+function benchmarkModel(modelId = selectedBenchmarkModelId) {
+  return benchmarkBundle.models.find((model) => model.id === modelId);
+}
+
+function benchmarkYearData(year = benchmarkYear) {
+  return benchmarkBundle.years?.[String(year)];
+}
+
+function benchmarkActive() {
+  return activeSection === 'methods' && activeLabMode === 'benchmark' && Boolean(benchmarkYearData());
+}
+
+function benchmarkCellPolygon(index) {
+  const grid = benchmarkBundle.metadata.grid;
+  const row = Math.floor(index / grid.columns);
+  const column = index % grid.columns;
+  const west = grid.west + column * grid.stepDegrees;
+  const south = grid.south + row * grid.stepDegrees;
+  const east = west + grid.stepDegrees;
+  const north = south + grid.stepDegrees;
+  return [[west, south], [east, south], [east, north], [west, north], [west, south]];
+}
+
+function benchmarkTopIndices(modelId, yearData = benchmarkYearData()) {
+  if (!yearData?.scores?.[modelId]) return new Set();
+  const ranked = yearData.eligibleIndices
+    .map((index) => [index, yearData.scores[modelId][index]])
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, yearData.top5CellCount);
+  return new Set(ranked.map(([index]) => index));
+}
+
+function benchmarkRiskData() {
+  const yearData = benchmarkYearData();
+  if (!yearData || !selectedBenchmarkModelId) return { type: 'FeatureCollection', features: [] };
+  const scores = yearData.scores[selectedBenchmarkModelId] || [];
+  return {
+    type: 'FeatureCollection',
+    features: yearData.eligibleIndices.map((index) => geojsonFeature('Polygon', [benchmarkCellPolygon(index)], {
+      risk: scores[index] || 0,
+      modelId: selectedBenchmarkModelId
+    }))
+  };
+}
+
+function benchmarkAllocationData() {
+  const yearData = benchmarkYearData();
+  if (!yearData) return { type: 'FeatureCollection', features: [] };
+  const modelIds = benchmarkComparisonEnabled ? benchmarkComparisonIds : [selectedBenchmarkModelId];
+  return {
+    type: 'FeatureCollection',
+    features: modelIds.flatMap((modelId) => {
+      const selected = modelId === selectedBenchmarkModelId;
+      return [...benchmarkTopIndices(modelId, yearData)].map((index) => geojsonFeature('Polygon', [benchmarkCellPolygon(index)], {
+        modelId,
+        color: benchmarkColors[modelId] || '#d9f083',
+        selected: selected ? 1 : 0
+      }));
+    })
+  };
+}
+
+function benchmarkTruthData() {
+  const yearData = benchmarkYearData();
+  if (!yearData) return { type: 'FeatureCollection', features: [] };
+  const grid = benchmarkBundle.metadata.grid;
+  return {
+    type: 'FeatureCollection',
+    features: yearData.truthIndices.map((index) => {
+      const row = Math.floor(index / grid.columns);
+      const column = index % grid.columns;
+      return geojsonFeature('Point', [
+        grid.west + (column + .5) * grid.stepDegrees,
+        grid.south + (row + .5) * grid.stepDegrees
+      ], { year: benchmarkYear, endpoint: 'first report' });
+    })
+  };
+}
+
+function updateBenchmarkMap() {
+  if (!map?.getSource('lt-benchmark-risk')) return;
+  map.getSource('lt-benchmark-risk').setData(benchmarkRiskData());
+  map.getSource('lt-benchmark-allocation').setData(benchmarkAllocationData());
+  map.getSource('lt-benchmark-truth').setData(benchmarkTruthData());
+  const visible = benchmarkActive();
+  ['lt-benchmark-risk-fill', 'lt-benchmark-risk-grid', 'lt-benchmark-allocation', 'lt-benchmark-truth']
+    .forEach((id) => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none'); });
+  const normalLayerIds = [
+    'lt-heatmap', 'lt-heatmap-preview', 'lt-uncertainty-fill', 'lt-uncertainty-line',
+    'lt-interpolation-fill', 'lt-interpolation-line', 'lt-front-fill', 'lt-front-line', 'lt-front-glow',
+    'lt-model-comparison-glow', 'lt-model-comparison-line', 'lt-corridor-glow', 'lt-corridors',
+    'lt-corridor-arrows', 'lt-reports', 'lt-report-hit', 'lt-reports-preview', 'lt-sites'
+  ];
+  if (visible) {
+    normalLayerIds.forEach((id) => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none'); });
+  } else {
+    Object.entries(layers).forEach(([layer, enabled]) => setMapLayerVisibility(layer, enabled));
+    updateModelComparison();
+  }
+  const status = $('#benchmark-status');
+  if (status) status.classList.toggle('hidden', !visible);
+}
+
+function renderBenchmarkLab() {
+  const ranking = $('#benchmark-ranking');
+  const detail = $('#benchmark-detail');
+  const yearData = benchmarkYearData();
+  if (!ranking || !detail) return;
+  if (!yearData || !benchmarkBundle.models.length) {
+    ranking.innerHTML = '<div class="asset-state"><b>Frozen benchmark unavailable</b><span>Run <code>npm run verify:release</code> or restore <code>generated/frozen-benchmark.js</code>.</span></div>';
+    detail.innerHTML = '<p>The scientific evaluation view is disabled because its versioned data artifact did not load.</p>';
+    return;
+  }
+  const ordered = [...benchmarkBundle.models].sort((left, right) =>
+    right.metrics[String(benchmarkYear)].averagePrecision - left.metrics[String(benchmarkYear)].averagePrecision
+  );
+  ranking.innerHTML = ordered.map((model, index) => {
+    const metric = model.metrics[String(benchmarkYear)];
+    return `<button class="model-choice ${model.id === selectedBenchmarkModelId ? 'active' : ''}" data-benchmark-model-id="${model.id}" style="--active-model:${benchmarkColors[model.id] || '#78efb5'}" aria-pressed="${model.id === selectedBenchmarkModelId}">
+      <span class="model-rank">#${index + 1}</span>
+      <span class="model-name"><b>${model.name}</b><small>AP ${metric.averagePrecision.toFixed(3)} · R@5% ${metric.recallAt5Pct.toFixed(3)}</small></span>
+      <span class="model-score"><strong>${metric.averagePrecision.toFixed(3)}</strong><small>AP</small></span>
+    </button>`;
+  }).join('');
+  const selected = benchmarkModel();
+  if (selected) {
+    const metric = selected.metrics[String(benchmarkYear)];
+    const difference = selected.ogRdeDifference;
+    const comparison = difference
+      ? `${difference.mean >= 0 ? '+' : ''}${difference.mean.toFixed(3)} vs OG-RDE within blocks (${difference.interval[0].toFixed(3)} to ${difference.interval[1].toFixed(3)})`
+      : 'Reference model for paired within-block differences';
+    detail.innerHTML = `<div class="model-detail-head"><span>SELECTED FROZEN MODEL</span><b>${benchmarkYear}</b></div>
+      <h3>${selected.name}</h3>
+      <p>Relative first-report risk rank · coefficients and specification unchanged after 2023. ${comparison}.</p>
+      <div class="benchmark-stat-grid">
+        <span><b>${metric.averagePrecision.toFixed(3)}</b>annual AP</span>
+        <span><b>${metric.recallAt5Pct.toFixed(3)}</b>R@5%</span>
+        <span><b>${selected.blockAveragePrecision.toFixed(3)}</b>block AP<br>${selected.blockInterval[0].toFixed(3)}–${selected.blockInterval[1].toFixed(3)}</span>
+      </div>`;
+  }
+  $$('.benchmark-year button').forEach((button) => {
+    const selected = Number(button.dataset.benchmarkYear) === benchmarkYear;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+  const compare = $('#compare-benchmark-inline');
+  if (compare) {
+    compare.classList.toggle('active', benchmarkComparisonEnabled);
+    compare.setAttribute('aria-pressed', String(benchmarkComparisonEnabled));
+    compare.querySelector('em').textContent = benchmarkComparisonEnabled ? 'ON' : 'OFF';
+  }
+  const mapKey = $('.map-key');
+  if (mapKey) {
+    const allocationLabels = benchmarkComparisonEnabled
+      ? benchmarkComparisonIds.map((id) => `<span><i class="allocation" style="border-color:${benchmarkColors[id]}"></i>${benchmarkModel(id)?.name || id}</span>`).join('')
+      : '<span><i class="allocation"></i>selected top 5%</span>';
+    mapKey.innerHTML = `<span><i class="risk"></i>relative rank</span>${allocationLabels}<span><i class="truth"></i>first reports</span>`;
+  }
+  const selectedModel = benchmarkModel();
+  const metric = selectedModel?.metrics?.[String(benchmarkYear)];
+  const status = $('#benchmark-status');
+  if (status && selectedModel && metric) {
+    status.innerHTML = `<b>Frozen first-report replay · ${benchmarkYear}</b>${selectedModel.name} · AP ${metric.averagePrecision.toFixed(3)} · R@5% ${metric.recallAt5Pct.toFixed(3)}<br><em>${yearData.truthIndices.length} first-report cells · relative rank, not occupancy probability</em>`;
+  }
+}
+
+function selectBenchmarkModel(modelId) {
+  if (!benchmarkModel(modelId)) return;
+  selectedBenchmarkModelId = modelId;
+  renderBenchmarkLab();
+  updateBenchmarkMap();
+}
+
+function setBenchmarkYear(year) {
+  if (!benchmarkBundle.years?.[String(year)]) return;
+  benchmarkYear = Number(year);
+  renderBenchmarkLab();
+  updateBenchmarkMap();
+}
+
+function setLabMode(mode) {
+  activeLabMode = mode === 'scenario' ? 'scenario' : 'benchmark';
+  const benchmarkMode = activeLabMode === 'benchmark';
+  $('#benchmark-lab-panel')?.classList.toggle('hidden', !benchmarkMode);
+  $('#scenario-lab-panel')?.classList.toggle('hidden', benchmarkMode);
+  $('#benchmark-mode')?.classList.toggle('active', benchmarkMode);
+  $('#scenario-mode')?.classList.toggle('active', !benchmarkMode);
+  $('#benchmark-mode')?.setAttribute('aria-selected', String(benchmarkMode));
+  $('#scenario-mode')?.setAttribute('aria-selected', String(!benchmarkMode));
+  $('#benchmark-mode')?.setAttribute('tabindex', benchmarkMode ? '0' : '-1');
+  $('#scenario-mode')?.setAttribute('tabindex', benchmarkMode ? '-1' : '0');
+  $('.app-shell')?.classList.toggle('benchmark-mode', benchmarkActive());
+  renderBenchmarkLab();
+  renderModelLab();
+  updateBenchmarkMap();
+  syncForecastSettingsUI();
+  startCorridorAnimation();
+  updatePlaybackControls();
+  if (benchmarkMode && activeSection === 'methods') map?.easeTo({ center: [-75, 41.5], zoom: 4.25, duration: 650 });
 }
 
 function sourceData() {
@@ -443,6 +658,9 @@ function addMapLayers() {
   map.addSource('lt-corridors', { type: 'geojson', data: data.corridors });
   map.addSource('lt-corridor-flow', { type: 'geojson', data: corridorFlowData() });
   map.addSource('lt-sites', { type: 'geojson', data: data.sites });
+  map.addSource('lt-benchmark-risk', { type: 'geojson', data: benchmarkRiskData() });
+  map.addSource('lt-benchmark-allocation', { type: 'geojson', data: benchmarkAllocationData() });
+  map.addSource('lt-benchmark-truth', { type: 'geojson', data: benchmarkTruthData() });
 
   map.addLayer({ id: 'lt-heatmap', type: 'heatmap', source: 'lt-reports', maxzoom: 6.5, filter: observationFilter, paint: {
     'heatmap-weight': ['interpolate', ['linear'], ['zoom'], 0, 0.5, 8, 1.4],
@@ -457,6 +675,20 @@ function addMapLayers() {
     'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 2, 7, 6, 12, 10, 19],
     'heatmap-opacity': 0.42,
     'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(9, 41, 43, 0)', 0.12, 'rgba(20, 112, 102, .18)', 0.32, 'rgba(32, 169, 125, .34)', 0.58, 'rgba(81, 211, 148, .48)', 0.82, 'rgba(171, 237, 116, .58)', 1, 'rgba(210, 247, 151, .68)']
+  } });
+  map.addLayer({ id: 'lt-benchmark-risk-fill', type: 'fill', source: 'lt-benchmark-risk', layout: { visibility: 'none' }, paint: {
+    'fill-color': ['interpolate', ['linear'], ['get', 'risk'], 0, 'rgba(4, 28, 22, 0)', .35, 'rgba(24, 112, 91, .12)', .7, 'rgba(73, 195, 139, .38)', 1, 'rgba(210, 247, 129, .72)'],
+    'fill-opacity': .82
+  } });
+  map.addLayer({ id: 'lt-benchmark-risk-grid', type: 'line', source: 'lt-benchmark-risk', layout: { visibility: 'none' }, paint: { 'line-color': '#77b79e', 'line-width': .35, 'line-opacity': .22 } });
+  map.addLayer({ id: 'lt-benchmark-allocation', type: 'line', source: 'lt-benchmark-allocation', layout: { visibility: 'none' }, paint: {
+    'line-color': ['get', 'color'],
+    'line-width': ['case', ['==', ['get', 'selected'], 1], 2.5, 1.4],
+    'line-opacity': ['case', ['==', ['get', 'selected'], 1], .98, .76]
+  } });
+  map.addLayer({ id: 'lt-benchmark-truth', type: 'circle', source: 'lt-benchmark-truth', layout: { visibility: 'none' }, paint: {
+    'circle-color': 'rgba(4, 18, 14, .12)', 'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, 3.5, 7, 7],
+    'circle-stroke-color': '#ff907d', 'circle-stroke-width': 2, 'circle-opacity': .98
   } });
   map.addLayer({ id: 'lt-uncertainty-fill', type: 'fill', source: 'lt-uncertainty', paint: { 'fill-color': '#2e8f78', 'fill-opacity': 0.22, 'fill-outline-color': '#69dcae' } });
   map.addLayer({ id: 'lt-uncertainty-line', type: 'line', source: 'lt-uncertainty', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#64d9ab', 'line-width': 2, 'line-opacity': 0.58, 'line-blur': 0.25 } });
@@ -588,7 +820,10 @@ function ensureTimelineOverview() {
 
 function syncLayerControls() {
   $$('[data-layer]').forEach((control) => {
-    if (control.tagName === 'BUTTON') control.classList.toggle('on', Boolean(layers[control.dataset.layer]));
+    if (control.tagName === 'BUTTON') {
+      control.classList.toggle('on', Boolean(layers[control.dataset.layer]));
+      control.setAttribute('aria-pressed', String(Boolean(layers[control.dataset.layer])));
+    }
     if (control.tagName === 'INPUT') control.checked = Boolean(layers[control.dataset.layer]);
   });
   const activeCount = Object.values(layers).filter(Boolean).length;
@@ -604,11 +839,14 @@ function updateSnapshot({ deferReports = false, previewReports = false } = {}) {
   $('#snapshot-label').textContent = snapshot.label.toUpperCase();
   $('#leading-edge').textContent = snapshot.leadingEdge;
   $('#metric-cells').textContent = snapshot.cells;
-  $('#metric-confidence').textContent = snapshot.confidence;
+  $('#metric-confidence').textContent = 'NOT CALIBRATED';
   $('#metric-reports').textContent = reportCount.toLocaleString();
   $('#timeline').value = snapshotIndex;
   $('#timeline-progress').style.width = `${(snapshotIndex / Math.max(timelineMaxIndex(), 1)) * 100}%`;
-  if (map && map.getSource('lt-front')) {
+  updatePlaybackControls();
+  if (map && map.getSource('lt-front') && benchmarkActive()) {
+    updateBenchmarkMap();
+  } else if (map && map.getSource('lt-front')) {
     map.getSource('lt-front').setData({ type: 'FeatureCollection', features: [snapshotGeometryFeature(snapshot, 'front')] });
     map.getSource('lt-uncertainty').setData({ type: 'FeatureCollection', features: [snapshotGeometryFeature(snapshot, 'uncertainty')] });
     map.getSource('lt-interpolation').setData({ type: 'FeatureCollection', features: [snapshotGeometryFeature(snapshot, 'interpolation')] });
@@ -640,19 +878,18 @@ function renderModelLab() {
   const topFive = modelBundle.topFive.map((id) => modelBundle.variants.find((variant) => variant.id === id)).filter(Boolean);
   ranking.innerHTML = topFive.map((variant, index) => `
     <button class="model-choice ${variant.id === selectedModelId ? 'active' : ''}" data-model-id="${variant.id}" style="--active-model:${modelColors[index]}">
-      <span class="model-rank"><i style="--model-color:${modelColors[index]}"></i>#${variant.rank}</span><span class="model-name"><b>${variant.id} · ${variant.name}</b><small>R ${variant.recall.toFixed(3)} · F1 ${variant.f1.toFixed(3)}</small></span><span class="model-score"><strong>${variant.score.toFixed(1)}</strong><i style="--score:${variant.score}%"></i></span>
+      <span class="model-rank"><i style="--model-color:${modelColors[index]}"></i></span><span class="model-name"><b>${variant.id} · ${variant.name}</b><small>assimilating display contour · legacy score omitted</small></span>
     </button>`).join('');
   const selected = selectedModelRanking();
   if (selected) {
     const features = selected.features.length ? selected.features : ['diffusion'];
-    detail.innerHTML = `<div class="model-detail-head"><span>ACTIVE DIFFUSION MODEL</span><b>${selected.id}</b></div><h3>${selected.name}</h3><p>Monthly evidence-assimilating backcast · forecast available in Settings</p><div class="model-feature-list">${features.map((feature) => `<em>${feature}</em>`).join('')}<em>τ ${selected.threshold.toFixed(2)}</em><em>Brier ${selected.brier.toFixed(4)}</em></div>`;
+    detail.innerHTML = `<div class="model-detail-head"><span>ACTIVE DISPLAY VARIANT</span><b>${selected.id}</b></div><h3>${selected.name}</h3><p>Monthly evidence-assimilating scenario · not a frozen forecast benchmark</p><div class="model-feature-list">${features.map((feature) => `<em>${feature}</em>`).join('')}<em>display contour τ ${selected.threshold.toFixed(2)}</em><em>composite not calibrated</em></div>`;
   }
   const learned = modelBundle.variants.filter((variant) => variant.features.includes('learned')).sort((a, b) => a.rank - b.rank)[0];
   const learnedBaseline = modelBundle.variants.find((variant) => variant.id === 'D14');
   const learnedNote = $('#learned-model-note');
   if (learned && learnedNote) {
-    const comparison = learnedBaseline && learned.id === 'D18' ? ` · +${(learned.score - learnedBaseline.score).toFixed(1)} vs matched non-learned habitat model` : '';
-    learnedNote.innerHTML = `<span>BEST LEARNED HYBRID</span><b>#${learned.rank} ${learned.id} · ${learned.score.toFixed(1)}</b><small>Neural residual constrained to the diffusion front${comparison}</small>`;
+    learnedNote.innerHTML = `<span>LEARNED DISPLAY VARIANT</span><b>${learned.id} · ${learned.name}</b><small>Neural residual constrained to the diffusion front · exploratory playback only</small>`;
   }
   const compareButton = $('#compare-models-inline');
   if (compareButton) {
@@ -664,7 +901,7 @@ function renderModelLab() {
   const legend = $('#model-comparison-legend');
   const activeSnapshot = snapshots[snapshotIndex];
   const phase = activeSnapshot?.isProjection ? 'FORECAST' : 'BACKCAST + REPORTS';
-  if (legend) legend.innerHTML = `<div><span>${phase}</span><b>${activeSnapshot?.period || 'model frame'}</b></div>${topFive.map((variant, index) => `<button data-model-id="${variant.id}" class="${variant.id === selectedModelId ? 'active' : ''}"><i style="--model-color:${modelColors[index]}"></i><span><b>${variant.id}</b><small>#${variant.rank} · ${variant.score.toFixed(1)}</small></span></button>`).join('')}`;
+  if (legend) legend.innerHTML = `<div><span>${phase}</span><b>${activeSnapshot?.period || 'model frame'}</b></div>${topFive.map((variant, index) => `<button data-model-id="${variant.id}" class="${variant.id === selectedModelId ? 'active' : ''}"><i style="--model-color:${modelColors[index]}"></i><span><b>${variant.id}</b><small>display variant</small></span></button>`).join('')}`;
 }
 
 function selectDiffusionModel(modelId) {
@@ -685,6 +922,9 @@ function syncForecastSettingsUI() {
   if (projections) projections.checked = forecastSettings.projectionsEnabled;
   if (comparison) comparison.checked = forecastSettings.comparisonEnabled;
   if (uncertainty) uncertainty.disabled = !forecastSettings.projectionsEnabled;
+  const scenarioControlsDisabled = benchmarkActive();
+  if (projections) projections.disabled = scenarioControlsDisabled;
+  if (comparison) comparison.disabled = scenarioControlsDisabled;
   renderTimelineTicks();
   renderModelLab();
   updateModelComparison();
@@ -714,6 +954,13 @@ function toggleSettingsPanel(force) {
   const shouldOpen = typeof force === 'boolean' ? force : panel.classList.contains('hidden');
   panel.classList.toggle('hidden', !shouldOpen);
   $('#settings-toggle').setAttribute('aria-expanded', String(shouldOpen));
+  if (shouldOpen) {
+    settingsReturnFocus = document.activeElement;
+    panel.focus();
+  } else if (settingsReturnFocus instanceof HTMLElement) {
+    settingsReturnFocus.focus();
+    settingsReturnFocus = null;
+  }
 }
 
 function initMap() {
@@ -735,6 +982,8 @@ function initMap() {
     map.addImage(id, { width: size, height: size, data: context.getImageData(0, 0, size, size).data });
   });
   map.on('load', () => {
+    if (mapLayersAdded) return;
+    mapLayersAdded = true;
     map.setProjection({ type: 'globe' });
     map.jumpTo({ center: [-75.5, 40.7], zoom: 4.1 });
     tintBaseMapDarkGreen();
@@ -745,6 +994,16 @@ function initMap() {
     syncLayerControls();
     renderTimelineTicks();
     updateSnapshot();
+    renderBenchmarkLab();
+    updateBenchmarkMap();
+    $('#map-state')?.classList.add('hidden');
+  });
+  map.on('error', () => {
+    const state = $('#map-state');
+    if (!mapLayersAdded && state) {
+      state.classList.remove('hidden');
+      state.innerHTML = '<b>Basemap unavailable</b><span>Check the network connection, then restart. Scientific data remain unchanged.</span>';
+    }
   });
   map.on('resize', updateGlobeAtmosphere);
   map.on('zoom', updateGlobeAtmosphere);
@@ -854,10 +1113,23 @@ function renderTimelineTicks() {
 function switchSection(section) {
   activeSection = section;
   $$('.section-tab').forEach((button) => button.classList.toggle('active', button.dataset.section === section));
-  $$('.topbar-section').forEach((button) => button.classList.toggle('active', button.dataset.section === section));
+  $$('.topbar-section').forEach((button) => {
+    const selected = button.dataset.section === section;
+    button.classList.toggle('active', selected);
+    if (selected) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
   ['front', 'evidence', 'actions', 'methods'].forEach((name) => $(`#${name}-panel`).classList.toggle('hidden', name !== section));
+  $('.app-shell')?.classList.toggle('methods-active', section === 'methods');
+  const methodsWorkspace = section === 'methods';
+  $('.sidebar').style.width = methodsWorkspace ? (window.innerWidth <= 1180 ? '420px' : '440px') : '';
+  $('.timeline-dock').style.left = methodsWorkspace ? (window.innerWidth <= 1180 ? '420px' : '440px') : '';
+  $('.species-hero').style.display = methodsWorkspace ? 'none' : '';
+  $('.app-shell')?.classList.toggle('benchmark-mode', benchmarkActive());
   if (map?.getSource('lt-front')) updateSnapshot();
   else updateModelComparison();
+  updateBenchmarkMap();
+  syncForecastSettingsUI();
 }
 
 function setSnapshot(index, options) { snapshotIndex = Math.max(0, Math.min(timelineMaxIndex(), index)); updateSnapshot(options); }
@@ -868,11 +1140,23 @@ function stopPlayback() {
   cancelAnimationFrame(timer);
   animationLastFrame = 0;
   $('#timeline-play').textContent = '▶';
+  $('.timeline-date')?.setAttribute('aria-live', 'polite');
+  updatePlaybackControls();
+}
+
+function updatePlaybackControls() {
+  const back = $('#timeline-back');
+  const forward = $('#timeline-forward');
+  const play = $('#timeline-play');
+  if (back) back.disabled = snapshotIndex <= 0 || benchmarkActive();
+  if (forward) forward.disabled = snapshotIndex >= timelineMaxIndex() || benchmarkActive();
+  if (play) play.disabled = benchmarkActive();
 }
 
 function togglePlay() {
   playing = !playing;
   $('#timeline-play').textContent = playing ? 'Ⅱ' : '▶';
+  $('.timeline-date')?.setAttribute('aria-live', playing ? 'off' : 'polite');
   cancelAnimationFrame(timer);
   animationLastFrame = 0;
   if (playing) {
@@ -882,13 +1166,16 @@ function togglePlay() {
     const animate = (timestamp) => {
       if (!playing) return;
       if (!animationLastFrame) animationLastFrame = timestamp;
-      if (timestamp - animationLastFrame >= 33) {
-        animationLastFrame += 33;
+      const interval = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 650 : 330;
+      if (timestamp - animationLastFrame >= interval) {
+        animationLastFrame += interval;
         if (snapshotIndex >= timelineMaxIndex()) {
           playing = false;
           $('#timeline-play').textContent = '▶';
+          $('.timeline-date')?.setAttribute('aria-live', 'polite');
           setReportPreviewMode(false);
           updateSnapshot();
+          updatePlaybackControls();
           return;
         }
         setSnapshot(snapshotIndex + 1);
@@ -911,18 +1198,26 @@ function toggleSidebar() {
 
 function downloadSnapshot() {
   const snapshot = snapshots[snapshotIndex];
-  const payload = { app: 'LanternTrace Explorer', generatedAt: new Date().toISOString(), snapshot, selectedModel: selectedModelRanking(), modelMetadata: modelBundle.metadata, layers, caveat: 'Presence-only retrospective prototype; not independent field validation or operational guidance.' };
+  const frozen = benchmarkActive() ? { year: benchmarkYear, selectedModel: benchmarkModel(), yearData: benchmarkYearData(), comparedModelIds: benchmarkComparisonEnabled ? benchmarkComparisonIds : [selectedBenchmarkModelId] } : null;
+  const payload = { app: 'LanternTrace Explorer', generatedAt: new Date().toISOString(), mode: frozen ? 'frozen-first-report-replay' : 'evidence-or-scenario-display', frozenEvaluation: frozen, snapshot: frozen ? undefined : snapshot, selectedScenarioVariant: frozen ? undefined : selectedModelRanking(), modelMetadata: frozen ? benchmarkBundle.metadata : modelBundle.metadata, layers, caveat: 'Presence-only retrospective prototype; relative risks are not occupancy probabilities; not independent field validation or operational guidance.' };
   const link = document.createElement('a');
   link.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
-  link.download = `lanterntrace-front-${snapshot.year}.json`;
+  link.download = frozen ? `lanterntrace-frozen-replay-${benchmarkYear}.json` : `lanterntrace-front-${snapshot.year}.json`;
   link.click();
   URL.revokeObjectURL(link.href);
+  const status = $('#export-status');
+  if (status) {
+    status.textContent = `Export started · ${link.download}`;
+    status.classList.remove('hidden');
+    window.setTimeout(() => status.classList.add('hidden'), 4200);
+  }
 }
 
 function searchPlace(value) {
   const key = value.trim().toLowerCase();
   const result = Object.keys(placeSearch).find((name) => name.includes(key) || key.includes(name));
   const results = $('#search-results');
+  if (!results) return;
   if (!key) { results.classList.remove('visible'); return; }
   results.innerHTML = result ? `<button data-place="${result}">${result.replace(/\b\w/g, (letter) => letter.toUpperCase())}<small>zoom to region</small></button>` : '<span>No local place match</span>';
   results.classList.add('visible');
@@ -934,7 +1229,7 @@ function setupInteractions() {
   $$('.menu-button, .collapse, #sidebar-restore').forEach((button) => button.addEventListener('click', toggleSidebar));
   $$('.section-tab').forEach((button) => button.addEventListener('click', () => switchSection(button.dataset.section)));
   $$('.topbar-section').forEach((button) => button.addEventListener('click', () => switchSection(button.dataset.section)));
-  $$('button[data-layer]').forEach((button) => button.addEventListener('click', () => { const layer = button.dataset.layer; layers[layer] = !layers[layer]; setMapLayerVisibility(layer, layers[layer]); syncLayerControls(); }));
+  $$('button[data-layer]').forEach((button) => button.addEventListener('click', () => { const layer = button.dataset.layer; layers[layer] = !layers[layer]; setMapLayerVisibility(layer, layers[layer]); syncLayerControls(); if (layer === 'corridors') startCorridorAnimation(); }));
   $$('input[data-layer]').forEach((input) => input.addEventListener('change', () => { layers[input.dataset.layer] = input.checked; setMapLayerVisibility(input.dataset.layer, input.checked); syncLayerControls(); }));
   const timeline = $('#timeline');
   timeline.addEventListener('pointerdown', () => {
@@ -973,6 +1268,38 @@ function setupInteractions() {
   $('#setting-projections').addEventListener('change', (event) => setProjectionEnabled(event.target.checked));
   $('#setting-comparison').addEventListener('change', (event) => setComparisonEnabled(event.target.checked));
   $('#compare-models-inline').addEventListener('click', () => setComparisonEnabled(!forecastSettings.comparisonEnabled));
+  $('#benchmark-mode')?.addEventListener('click', () => setLabMode('benchmark'));
+  $('#scenario-mode')?.addEventListener('click', () => setLabMode('scenario'));
+  $$('.benchmark-year button').forEach((button) => button.addEventListener('click', () => setBenchmarkYear(button.dataset.benchmarkYear)));
+  $('#compare-benchmark-inline')?.addEventListener('click', () => { benchmarkComparisonEnabled = !benchmarkComparisonEnabled; renderBenchmarkLab(); updateBenchmarkMap(); });
+  $('#benchmark-ranking')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-benchmark-model-id]');
+    if (button) selectBenchmarkModel(button.dataset.benchmarkModelId);
+  });
+  $('#export-snapshot')?.addEventListener('click', downloadSnapshot);
+  $('#place-search')?.addEventListener('input', (event) => searchPlace(event.target.value));
+  $('.paper-link')?.addEventListener('click', async (event) => {
+    if (!window.lanternTrace?.openPaper) return;
+    event.preventDefault();
+    const error = await window.lanternTrace.openPaper();
+    const status = $('#export-status');
+    if (status) {
+      status.textContent = error ? `Paper could not open · ${error}` : 'Opened the methods paper in the system PDF viewer';
+      status.classList.remove('hidden');
+      window.setTimeout(() => status.classList.add('hidden'), 4200);
+    }
+  });
+  $('#settings-panel')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') { event.preventDefault(); toggleSettingsPanel(false); }
+  });
+  $('.lab-mode-tabs')?.addEventListener('keydown', (event) => {
+    if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    event.preventDefault();
+    const next = activeLabMode === 'benchmark' ? 'scenario' : 'benchmark';
+    setLabMode(next);
+    $(`#${next}-mode`)?.focus();
+  });
+  document.addEventListener('visibilitychange', startCorridorAnimation);
   $('#model-ranking')?.addEventListener('click', (event) => {
     const button = event.target.closest('[data-model-id]');
     if (button) selectDiffusionModel(button.dataset.modelId);
@@ -988,9 +1315,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const generated = observationMetadata.generatedAt ? new Date(observationMetadata.generatedAt).toLocaleDateString() : 'unavailable';
   const evidenceCount = $('#public-observation-count');
   const evidenceSource = $('#public-observation-source');
-  if (evidenceCount) evidenceCount.textContent = count;
-  if (evidenceSource) evidenceSource.textContent = `GBIF public-coordinate records · refreshed ${generated}`;
+  if (evidenceCount) evidenceCount.textContent = observationPoints.length ? count : 'NOT LOADED';
+  if (evidenceSource) evidenceSource.textContent = observationPoints.length ? `GBIF public-coordinate records · refreshed ${generated}` : 'Optional occurrence bundle missing; frozen benchmark remains available';
   syncForecastSettingsUI();
+  renderBenchmarkLab();
+  setLabMode('benchmark');
   createStarfield();
   initMap();
   setupInteractions();

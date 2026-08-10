@@ -1,6 +1,7 @@
-const { contextBridge } = require('electron');
+const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('lanternTrace', {
   appName: 'LanternTrace Explorer',
-  version: '0.1.0'
+  version: '0.2.0',
+  openPaper: () => ipcRenderer.invoke('open-paper')
 });

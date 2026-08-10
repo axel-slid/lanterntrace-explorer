@@ -5,6 +5,7 @@ project_dir="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$project_dir"
 export SOURCE_DATE_EPOCH=1786319357
 
+python3 research/fetch_locked_inputs.py
 python3 research/verify_inputs.py
 python3 -m unittest research/test_study.py -v
 python3 research/run_sota_study.py

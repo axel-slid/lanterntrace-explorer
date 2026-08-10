@@ -1,5 +1,12 @@
-const { app, BrowserWindow, Menu, shell } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, shell } = require('electron');
 const path = require('node:path');
+
+function packagedPaperPath() {
+  const paper = path.join(app.getAppPath(), 'output', 'pdf', 'lanterntrace-frontier-forecasting.pdf');
+  return paper.replace(`${path.sep}app.asar${path.sep}`, `${path.sep}app.asar.unpacked${path.sep}`);
+}
+
+ipcMain.handle('open-paper', () => shell.openPath(packagedPaperPath()));
 
 function createWindow() {
   const window = new BrowserWindow({
@@ -26,6 +33,13 @@ function createWindow() {
   window.setPosition(40, 12);
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https://') || url.startsWith('http://')) shell.openExternal(url);
+    if (url.startsWith('file://')) {
+      const requested = decodeURIComponent(new URL(url).pathname);
+      const paper = path.join(app.getAppPath(), 'output', 'pdf', 'lanterntrace-frontier-forecasting.pdf');
+      if (path.normalize(requested) === path.normalize(paper)) {
+        shell.openPath(packagedPaperPath());
+      }
+    }
     return { action: 'deny' };
   });
   window.loadFile('index.html');

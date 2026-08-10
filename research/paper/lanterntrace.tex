@@ -4,7 +4,11 @@
 \usepackage[font=small,labelfont=bf]{caption}
 \definecolor{forest}{HTML}{13795B}
 \definecolor{coral}{HTML}{D95D52}
-\hypersetup{colorlinks=true,linkcolor=forest,citecolor=forest,urlcolor=forest}
+\hypersetup{colorlinks=true,linkcolor=forest,citecolor=forest,urlcolor=forest,
+  pdfauthor={Alex Arthur Dils},
+  pdftitle={Cumulative Maps Overstate Invasion Forecast Skill},
+  pdfsubject={A frozen first-report benchmark for spotted lanternfly surveillance},
+  pdfkeywords={invasive species, spotted lanternfly, first-report forecasting, reaction-diffusion, temporal validation}}
 \setlength{\columnsep}{0.22in}
 \setlength{\parindent}{0.12in}
 \setlength{\parskip}{1.2pt}
@@ -28,7 +32,7 @@
 \vspace{4pt}
 {\large A frozen first-report benchmark for spotted lanternfly surveillance}\par
 \vspace{7pt}
-{\normalsize Anonymous author(s) · LanternTrace Explorer research prototype}\par
+{\normalsize Alex Arthur Dils · LanternTrace Explorer research prototype}\par
 \vspace{3pt}
 {\small Preprint / technical report. Results are not peer reviewed.}\par
 {\footnotesize Code, application, and paper: \href{https://github.com/axel-slid/lanterntrace-explorer}{github.com/axel-slid/lanterntrace-explorer}}
@@ -36,14 +40,14 @@
 
 \begin{multicols}{2}
 \tightsection{Abstract}
-Invasion maps remember every place a species has been reported. A forecasting method can therefore look accurate by reproducing yesterday's range without locating tomorrow's front. We asked how much this persistence inflates apparent skill and whether reaction--diffusion physics improves prediction once known cells are removed. From 57,999 dated spotted-lanternfly records on a $0.2^\circ$ northeastern United States grid, we reconstructed annual first-report events and ranked only cells unreported at each origin. We compared simple baselines, Cook et al.'s published 2021 dispersal kernel, a covariate hazard, four reaction--diffusion models, and an observation-guided ensemble (OG-RDE). For identical Transport-RD predictions, cumulative targets produced 0.896--0.952 average precision (AP), whereas next-year first reports produced 0.478--0.545; prevalence normalization did not remove the inflation. We then fit learned coefficients using transitions through 2023, froze the specification, and replayed 2024--2025 with annual state updates. Frozen OG-RDE scored 0.479 and 0.515 AP, well above the distance baseline (0.275 and 0.288), but not above the covariate hazard (0.487 and 0.521) or Transport RD (0.478 and 0.482). Within geographic blocks, Transport RD exceeded OG-RDE by 0.041 AP (95\% block-bootstrap interval 0.010--0.081). Thus the main result is not a winning forecast surface: cumulative-map scoring can manufacture impressive performance, while a harder frozen replay reveals useful frontier signal but no learned-physics advantage. Because the freeze is reconstructed from a 2026 snapshot rather than preregistered, prospective or independently surveyed validation remains necessary.
+Public occurrence maps are cumulative, spatially biased records of discovery rather than direct measurements of biological occupancy. Yet a forecast is often rewarded for reproducing these maps, allowing it to look accurate by remembering yesterday's range instead of locating tomorrow's front. We asked how much this persistence inflates apparent skill and whether reaction--diffusion physics improves prediction once every previously reported cell is removed. From 57,999 dated spotted-lanternfly records on a $0.2^\circ$ northeastern United States grid, we reconstructed annual first-report events and compared simple baselines, Cook et al.'s published 2021 dispersal kernel, a covariate hazard, four reaction--diffusion models, and an observation-guided ensemble (OG-RDE). For identical Transport-RD predictions, cumulative targets yielded 0.896--0.952 average precision (AP), but next-year first reports yielded only 0.478--0.545; correcting for prevalence did not close the gap. We then fit learned coefficients through 2023, froze them, and replayed 2024--2025 while updating only the observed range. Frozen OG-RDE retained useful signal (AP 0.479 and 0.515) and clearly exceeded distance alone (0.275 and 0.288), but it did not exceed the covariate hazard (0.487 and 0.521). Transport RD also surpassed OG-RDE within geographic blocks by 0.041 AP (95\% block-bootstrap interval 0.010--0.081). The result is therefore an evaluation correction, not a winning surface: cumulative scoring can manufacture impressive performance, whereas frozen first-report replay reveals useful frontier signal without evidence that learned physics adds value. Because this freeze was reconstructed from a 2026 snapshot rather than preregistered, prospective or independently surveyed validation remains necessary.
 
 \tightsection{1. Introduction}
-Invasive-species forecasts face an unusual benchmark: the map never forgets. Once a cell is reported, it remains colored on every later cumulative range map. A method that simply preserves known cells can therefore earn a high score without predicting a single new arrival.
+Biological invasions force surveillance programs to decide where to look before the next arrival is known. Public occurrence maps appear to supply both the history and the answer, but they record discovery as well as spread. Once a cell is reported, it remains colored on every later map. The benchmark therefore never forgets, and a method can earn a high score by preserving known cells without locating a single new report.
 
-Spotted lanternfly (\textit{Lycorma delicatula}) makes the distinction consequential. Its spread mixes short-range biological dispersal with long-distance human transport, inviting reaction--diffusion models with nonlocal jumps, habitat suitability, and barriers. Yet public reports are collected where people look, and an unreported cell is not a verified absence. The same data that motivate a mechanistic model can make that model deceptively easy to validate.
+Spotted lanternfly (\textit{Lycorma delicatula}) makes this gap consequential. Its spread mixes short-range biological dispersal with long-distance human transport, inviting reaction--diffusion models with nonlocal jumps, habitat suitability, and barriers. Yet the public record is densest where people look, and an unreported cell is neither a verified absence nor necessarily uninvaded. The same cumulative data that motivate a mechanistic forecast can therefore make it deceptively easy to validate.
 
-We therefore follow two questions in sequence. First, how much forecast skill disappears when known cells are removed from the target? Second, after learned coefficients are frozen, do physics-informed models locate new reports better than a literature kernel, a covariate model, and simple diffusion? We answer on an operational endpoint: among cells not previously reported, which will be first reported next? This endpoint still combines invasion and observation, but it cannot be solved by copying the past.
+That leaves a narrow knowledge gap: we do not know how much reported forecast skill is persistence credit, or whether added physics helps after that credit is removed. We therefore follow two questions in sequence. First, how much skill disappears when known cells are excluded from the target? Second, after learned coefficients are frozen, do physics-informed models locate new reports better than a published literature kernel, a covariate model, and simple diffusion? Our endpoint is deliberately operational: among cells not previously reported, which will be reported first next year? It still combines invasion with observation, but it cannot be solved by copying the past.
 \end{multicols}
 
 \vfill
@@ -412,7 +416,7 @@ The public repository is \href{https://github.com/axel-slid/lanterntrace-explore
 \end{thebibliography}}
 
 \tightsection{Author statement}
-The application and analysis were developed as a research prototype. Before journal submission, authorship, funding, conflict-of-interest, data-license, and code-archive statements must be completed. All numerical claims in this report are generated from the accompanying artifacts; interpretive claims are bounded by the limitations above.
+Alex Arthur Dils developed the application, analysis, visualizations, and manuscript. Third-party data retain the source licenses documented with the public artifact. Funding, competing-interest, and permanent archive DOI statements remain to be confirmed before journal submission. All numerical claims in this report are generated from the accompanying artifacts; interpretive claims are bounded by the limitations above.
 \end{multicols}
 
 \end{document}

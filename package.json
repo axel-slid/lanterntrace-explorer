@@ -1,7 +1,8 @@
 {
   "name": "lanterntrace-explorer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Electron prototype for exploring spotted lanternfly invasion-front evidence.",
+  "author": "LanternTrace Explorer contributors",
   "main": "main.js",
   "type": "commonjs",
   "scripts": {
@@ -10,7 +11,9 @@
     "data:gbif": "node scripts/fetch-gbif-observations.mjs",
     "model:build": "python3 scripts/build-diffusion-model.py",
     "model:test": "python3 scripts/build-diffusion-model.py --verify",
-    "pack": "electron-builder --dir"
+    "pack": "npm run verify:release && electron-builder --dir && npm run verify:package",
+    "verify:release": "node --check app.js && node --check generated/model-results.js && node --check generated/frozen-benchmark.js && python3 research/verify_release.py",
+    "verify:package": "node scripts/verify-packaged-app.cjs"
   },
   "devDependencies": {
     "electron": "^43.0.0",
@@ -23,6 +26,16 @@
     "appId": "org.lanterntrace.explorer",
     "productName": "LanternTrace Explorer",
     "icon": "assets/icon.icns",
-    "files": ["**/*", "!node_modules/.cache/**/*"]
+    "asarUnpack": ["output/pdf/*.pdf"],
+    "files": [
+      "**/*",
+      "!node_modules/.cache/**/*",
+      "!research/**/*",
+      "!.model-cache/**/*",
+      "!generated/observations.js",
+      "!docs/**/*",
+      "!dist/**/*",
+      "!.github/**/*"
+    ]
   }
 }

@@ -32,6 +32,7 @@ from sklearn.preprocessing import StandardScaler
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "research" / "results"
 FIGURES = ROOT / "research" / "figures"
+GENERATED = ROOT / "generated"
 BUILDER_PATH = ROOT / "scripts" / "build-diffusion-model.py"
 
 spec = importlib.util.spec_from_file_location("lanterntrace_builder", BUILDER_PATH)
@@ -709,6 +710,73 @@ def save_figure(fig: plt.Figure, name: str) -> None:
     plt.close(fig)
 
 
+def export_frozen_benchmark(frozen_metrics: pd.DataFrame, frozen_summary: pd.DataFrame,
+                            frozen_comparisons: pd.DataFrame, frozen_predictions: dict) -> None:
+    """Emit a compact, committed app artifact for the frozen evaluation replay."""
+    model_order = [
+        "Covariate hazard", "OG-RDE", "Transport RD", "Climate RD",
+        "Fisher-KPP", "Full mechanistic", "Cook-2021 kernel", "Distance kernel",
+    ]
+    summary_by_model = frozen_summary.set_index("model")
+    comparison_by_model = frozen_comparisons.set_index("competitor")
+    models = []
+    for model in model_order:
+        annual = frozen_metrics[frozen_metrics.model == model].set_index("year")
+        block = summary_by_model.loc[model]
+        comparison = comparison_by_model.loc[model] if model != "OG-RDE" else None
+        models.append({
+            "id": model.lower().replace("-", "_").replace(" ", "_"),
+            "name": model,
+            "metrics": {
+                str(year): {
+                    "averagePrecision": round(float(annual.loc[year, "average_precision"]), 6),
+                    "recallAt5Pct": round(float(annual.loc[year, "recall_at_5pct"]), 6),
+                }
+                for year in FROZEN_TARGETS
+            },
+            "blockAveragePrecision": round(float(block.block_ap_mean), 6),
+            "blockInterval": [round(float(block.block_ap_low), 6), round(float(block.block_ap_high), 6)],
+            "ogRdeDifference": None if comparison is None else {
+                "mean": round(float(-comparison.mean_delta_ap), 6),
+                "interval": [round(float(-comparison.delta_high), 6), round(float(-comparison.delta_low), 6)],
+                "meaning": f"{model} minus OG-RDE within-block AP",
+            },
+        })
+    years = {}
+    for year, item in frozen_predictions.items():
+        mask = item["mask"]
+        years[str(year)] = {
+            "eligibleIndices": np.flatnonzero(mask.ravel()).astype(int).tolist(),
+            "truthIndices": np.flatnonzero((item["truth"] > 0).ravel()).astype(int).tolist(),
+            "top5CellCount": int(math.ceil(mask.sum() * .05)),
+            "scores": {
+                model.lower().replace("-", "_").replace(" ", "_"):
+                    np.round(percentile_grid(item["scores"][model], mask).ravel(), 4).tolist()
+                for model in model_order
+            },
+        }
+    payload = {
+        "metadata": {
+            "title": "Frozen first-report replay",
+            "trainingTransitions": "2018-2023",
+            "targets": FROZEN_TARGETS,
+            "endpoint": "cells first reported in target year among prior-year unreported U.S. land cells",
+            "status": "post-hoc frozen temporal replay; not preregistered, calibrated occupancy, or independent field validation",
+            "grid": {
+                "west": builder.WEST, "east": builder.EAST,
+                "south": builder.SOUTH, "north": builder.NORTH,
+                "stepDegrees": builder.STEP, "rows": builder.SHAPE[0], "columns": builder.SHAPE[1],
+            },
+            "source": "research/results/frozen_temporal_metrics.csv and prediction_grids.npz",
+        },
+        "models": models,
+        "years": years,
+    }
+    GENERATED.mkdir(parents=True, exist_ok=True)
+    output = "window.LanternTraceBenchmark = " + json.dumps(payload, separators=(",", ":"), allow_nan=False) + ";\n"
+    (GENERATED / "frozen-benchmark.js").write_text(output)
+
+
 def make_figures(data: DataBundle, metrics: pd.DataFrame, summary: pd.DataFrame, prediction_store: dict,
                  endpoint: pd.DataFrame, sensitivity: pd.DataFrame, frozen_metrics: pd.DataFrame,
                  frozen_summary: pd.DataFrame, frozen_predictions: dict,
@@ -1030,6 +1098,7 @@ def main() -> None:
     )
     make_figures(data, metrics, summary, prediction_store, endpoint, sensitivity,
                  frozen_metrics, frozen_summary, frozen_predictions, frozen_blocks)
+    export_frozen_benchmark(frozen_metrics, frozen_summary, frozen_comparisons, frozen_predictions)
     print("\nTemporal metrics:")
     print(metrics.pivot(index="model", columns="year", values="average_precision").round(3).to_string())
     print("\nSpatial-block bootstrap summary:")

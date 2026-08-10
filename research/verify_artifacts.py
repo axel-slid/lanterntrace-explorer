@@ -10,6 +10,7 @@ import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "research" / "results"
+GENERATED = ROOT / "generated"
 
 
 def main() -> None:
@@ -42,6 +43,19 @@ def main() -> None:
     missing = sorted(name for name in required_results if not (RESULTS / name).is_file())
     if missing:
         raise SystemExit(f"missing generated results: {', '.join(missing)}")
+
+    benchmark_path = GENERATED / "frozen-benchmark.js"
+    if not benchmark_path.is_file():
+        raise SystemExit("missing generated frozen-benchmark.js app artifact")
+    benchmark_text = benchmark_path.read_text()
+    prefix = "window.LanternTraceBenchmark = "
+    if not benchmark_text.startswith(prefix):
+        raise SystemExit("frozen benchmark app artifact has an invalid wrapper")
+    benchmark = json.loads(benchmark_text[len(prefix):].rstrip(";\n"))
+    if benchmark.get("metadata", {}).get("targets") != [2024, 2025]:
+        raise SystemExit("frozen benchmark app artifact has unexpected targets")
+    if len(benchmark.get("models", [])) != 8:
+        raise SystemExit("frozen benchmark app artifact must contain eight comparators")
 
     print("Generated provenance, manifest, and result tables verified.")
 
