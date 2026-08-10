@@ -561,7 +561,7 @@
       "year": 2025,
       "model": "Transport RD",
       "stepMonths": 1.0,
-      "average_precision": 0.48180727223693887,
+      "average_precision": 0.481807272237,
       "spearmanVsMonthly": 1.0,
       "meanAbsoluteDifference": 0.0
     },
@@ -569,23 +569,23 @@
       "year": 2025,
       "model": "Transport RD",
       "stepMonths": 0.5,
-      "average_precision": 0.48236455650937937,
-      "spearmanVsMonthly": 0.9999801639218188,
-      "meanAbsoluteDifference": 0.002488181853800119
+      "average_precision": 0.482364556509,
+      "spearmanVsMonthly": 0.999980163922,
+      "meanAbsoluteDifference": 0.002488181854
     },
     {
       "year": 2025,
       "model": "Transport RD",
       "stepMonths": 0.25,
-      "average_precision": 0.48147118027562213,
-      "spearmanVsMonthly": 0.9999567477919608,
-      "meanAbsoluteDifference": 0.0037529273179905884
+      "average_precision": 0.481471180276,
+      "spearmanVsMonthly": 0.999956747792,
+      "meanAbsoluteDifference": 0.003752927318
     },
     {
       "year": 2025,
       "model": "Full mechanistic",
       "stepMonths": 1.0,
-      "average_precision": 0.47757791274199396,
+      "average_precision": 0.477577912742,
       "spearmanVsMonthly": 1.0,
       "meanAbsoluteDifference": 0.0
     },
@@ -593,17 +593,17 @@
       "year": 2025,
       "model": "Full mechanistic",
       "stepMonths": 0.5,
-      "average_precision": 0.4776577102347087,
-      "spearmanVsMonthly": 0.9999887900644334,
-      "meanAbsoluteDifference": 0.0007887655267082768
+      "average_precision": 0.477657710235,
+      "spearmanVsMonthly": 0.999988790064,
+      "meanAbsoluteDifference": 0.000788765527
     },
     {
       "year": 2025,
       "model": "Full mechanistic",
       "stepMonths": 0.25,
-      "average_precision": 0.4777974507762279,
-      "spearmanVsMonthly": 0.9999789975701412,
-      "meanAbsoluteDifference": 0.0011735330453335753
+      "average_precision": 0.477797450776,
+      "spearmanVsMonthly": 0.99997899757,
+      "meanAbsoluteDifference": 0.001173533045
     }
   ],
   "parameterSensitivity": [

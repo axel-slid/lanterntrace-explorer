@@ -15,7 +15,7 @@ npm start
 
 The clean checkout includes the frozen 2024–2025 benchmark, exploratory monthly display models, and checksum-locked occurrence-point snapshot used in the report. Tested development environment: macOS arm64, Node 25, npm 11, and Python 3.13. Node 22+ is recommended.
 
-For the optional occurrence layer and a full local model rebuild:
+For a full local model rebuild:
 
 ```bash
 python3 -m venv .venv

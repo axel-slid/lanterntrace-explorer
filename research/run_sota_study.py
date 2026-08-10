@@ -540,9 +540,9 @@ def numerical_sensitivity(data: DataBundle, year: int = 2025) -> pd.DataFrame:
             result = builder.rollout(start, PHYSICS[key], data.cov, None, int(round(12 / step)), time_step_months=step)[-1]
             rows.append({
                 "year": year, "model": model, "stepMonths": step,
-                "average_precision": float(average_precision_score(truth, result[mask])),
-                "spearmanVsMonthly": float(spearmanr(reference[mask], result[mask]).statistic),
-                "meanAbsoluteDifference": float(np.mean(np.abs(reference[mask] - result[mask]))),
+                "average_precision": round(float(average_precision_score(truth, result[mask])), 12),
+                "spearmanVsMonthly": round(float(spearmanr(reference[mask], result[mask]).statistic), 12),
+                "meanAbsoluteDifference": round(float(np.mean(np.abs(reference[mask] - result[mask]))), 12),
             })
     return pd.DataFrame(rows)
 

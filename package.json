@@ -1,6 +1,6 @@
 {
   "name": "lanterntrace-explorer",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Electron prototype for exploring spotted lanternfly invasion-front evidence.",
   "author": "LanternTrace Explorer contributors",
   "main": "main.js",
@@ -41,6 +41,7 @@
       "!assets/lanternfly-cutout-source.png",
       "generated/model-results.js",
       "generated/frozen-benchmark.js",
+      "generated/observations.js",
       "output/pdf/lanterntrace-frontier-forecasting.pdf",
       "node_modules/**/*"
     ]

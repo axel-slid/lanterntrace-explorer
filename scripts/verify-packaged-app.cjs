@@ -30,13 +30,13 @@ for (const entry of files) {
   const rootEntry = `/${entry.split('/').filter(Boolean)[0]}`;
   assert.ok(allowedRoots.has(rootEntry), `unexpected top-level package entry: ${entry}`);
 }
-for (const required of ['/index.html', '/app.js', '/data.js', '/generated/model-results.js', '/generated/frozen-benchmark.js']) {
+for (const required of ['/index.html', '/app.js', '/data.js', '/generated/model-results.js', '/generated/frozen-benchmark.js', '/generated/observations.js']) {
   assert.ok(files.has(required), `packaged runtime file is missing: ${required}`);
 }
-for (const forbidden of ['/generated/observations.js', '/research', '/.model-cache', '/docs', '/tmp', '/catboost_info']) {
+for (const forbidden of ['/research', '/.model-cache', '/docs', '/tmp', '/catboost_info']) {
   assert.ok(![...files].some((entry) => entry === forbidden || entry.startsWith(`${forbidden}/`)), `local/research content leaked into package: ${forbidden}`);
 }
 const digest = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 assert.equal(digest(packagedPaper), digest(sourcePaper), 'packaged paper differs from the release PDF');
-assert.ok(fs.statSync(archive).size < 75 * 1024 * 1024, 'app.asar exceeds the release size ceiling');
+assert.ok(fs.statSync(archive).size < 90 * 1024 * 1024, 'app.asar exceeds the release size ceiling');
 console.log('Verified packaged runtime allowlist, in-app paper hash, and absence of local research inputs.');

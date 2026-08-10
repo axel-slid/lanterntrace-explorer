@@ -423,6 +423,12 @@ function modelComparisonData(snapshot = snapshots[snapshotIndex]) {
 function updateModelComparison() {
   const source = map?.getSource('lt-model-comparison');
   if (source) source.setData(modelComparisonData());
+  const visible = !benchmarkActive() && (
+    (activeSection === 'methods' && activeLabMode === 'scenario') || forecastSettings.comparisonEnabled
+  );
+  ['lt-model-comparison-glow', 'lt-model-comparison-line'].forEach((id) => {
+    if (map?.getLayer(id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
+  });
   const legend = $('#model-comparison-legend');
   if (legend) {
     legend.classList.toggle('hidden', !forecastSettings.comparisonEnabled || benchmarkActive());
