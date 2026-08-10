@@ -30,7 +30,7 @@
     "censusStateBoundary": "4295a503ff47e6787adfb520ad6706557e41c2ce57ced5a134087f8e35143a02",
     "worldclimElevation": "6a9f4e9a37f289d594ed1567b63be344a4dacf247f0b69756e81df031087e3bd",
     "worldclimBioclim": "00513224583665ec0f2f955a4ec252730c4deb2004cce9e793492a3f26df4dcf",
-    "studyScript": "314d87225ac3394f86202ae90bbf1f1ab2469ee661cac7154b7abb75759fcd6e",
+    "studyScript": "d07f10e929a77dd96bee51c041269afb01f086741699369a289e7a715e01c806",
     "solverScript": "9e4213cebd9b6676a36c6f32d3dd58480721d41544b0da4f1fd4f455a4789165"
   },
   "limitation": "Historical origins are reconstructed by event date from a 2026 snapshot; record availability timestamps and time-versioned host covariates are unavailable."

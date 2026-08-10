@@ -179,7 +179,7 @@
       "candidates": 1001,
       "average_precision": 0.05842916985576459,
       "roc_auc": 0.7803863868986695,
-      "recall_at_5pct": 0.25
+      "recall_at_5pct": 0.2916666666666667
     }
   ],
   "summary": [
@@ -428,8 +428,8 @@
     {
       "reference": "OG-RDE",
       "competitor": "OG-RDE + transport",
-      "mean_delta_ap": 0.001733016837625223,
-      "delta_low": -0.016613476154279078,
+      "mean_delta_ap": 0.0017330168376252508,
+      "delta_low": -0.016613476154278994,
       "delta_high": 0.021791801404875383,
       "completeYears": 4
     }
@@ -721,7 +721,7 @@
       "candidates": 1250,
       "average_precision": 0.2753177100910622,
       "roc_auc": 0.8418580542264753,
-      "recall_at_5pct": 0.2
+      "recall_at_5pct": 0.2727272727272727
     },
     {
       "year": 2024,
@@ -793,7 +793,7 @@
       "candidates": 1140,
       "average_precision": 0.28751932766506255,
       "roc_auc": 0.8057266474532662,
-      "recall_at_5pct": 0.08633093525179857
+      "recall_at_5pct": 0.23741007194244604
     },
     {
       "year": 2025,

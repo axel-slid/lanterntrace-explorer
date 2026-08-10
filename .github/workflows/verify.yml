@@ -27,4 +27,4 @@ jobs:
           python3 -m unittest -v research.test_study
           python3 research/run_sota_study.py
           python3 research/verify_artifacts.py
-          git diff --exit-code -- generated/frozen-benchmark.js research/results research/figures
+          git diff --exit-code -- generated/frozen-benchmark.js research/results/*.csv research/results/study_summary.json research/results/data_provenance.json

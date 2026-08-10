@@ -52,6 +52,16 @@ class NumericalBoundaryTests(unittest.TestCase):
 
 
 class EndpointTests(unittest.TestCase):
+    def test_top_fraction_ties_use_lower_cell_index(self):
+        labels = np.array([1, 0, 0, 0])
+        tied_scores = np.array([1.0, 1.0, 0.0, 0.0])
+        self.assertEqual(study.select_top_fraction(tied_scores, .25).tolist(), [0])
+        self.assertEqual(study.recall_at_fraction(labels, tied_scores, .25), 1.0)
+
+        mask = np.ones((2, 2), dtype=bool)
+        ranked = study.percentile_grid(tied_scores.reshape(2, 2), mask).ravel()
+        self.assertGreater(ranked[0], ranked[1])
+
     def test_frozen_replay_reuses_identical_learned_coefficients(self):
         data = study.load_data()
         first = study.train_ogrde(

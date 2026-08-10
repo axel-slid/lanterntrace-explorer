@@ -360,9 +360,28 @@ def train_ogrde(data: DataBundle, target_year: int, use_reporting: bool = True, 
     return model
 
 
+def stable_descending_order(values: np.ndarray) -> np.ndarray:
+    """Rank high-to-low with a reproducible lower-index tie break.
+
+    Quantization prevents inconsequential BLAS/platform roundoff from changing
+    the membership of an operational top-fraction allocation. Cell index is
+    the declared deterministic secondary key.
+    """
+    values = np.nan_to_num(np.asarray(values, dtype=float), nan=-np.inf)
+    quantized = np.round(values, 12)
+    return np.lexsort((np.arange(len(quantized)), -quantized))
+
+
+def select_top_fraction(score: np.ndarray, fraction: float = .05) -> np.ndarray:
+    count = max(1, int(math.ceil(len(score) * fraction)))
+    return stable_descending_order(score)[:count]
+
+
 def percentile_grid(values: np.ndarray, mask: np.ndarray) -> np.ndarray:
     output = np.zeros_like(values, dtype=float)
-    ranked = np.argsort(np.argsort(values[mask])).astype(float)
+    order = stable_descending_order(values[mask])
+    ranked = np.empty(len(order), dtype=float)
+    ranked[order] = np.arange(len(order) - 1, -1, -1, dtype=float)
     output[mask] = ranked / max(len(ranked) - 1, 1)
     return output
 
@@ -439,8 +458,7 @@ def predict_covariate_leave_block_out(data: DataBundle, target_year: int) -> np.
 def recall_at_fraction(y: np.ndarray, score: np.ndarray, fraction: float = .05) -> float:
     if y.sum() == 0:
         return float("nan")
-    count = max(1, int(math.ceil(len(y) * fraction)))
-    selected = np.argpartition(score, -count)[-count:]
+    selected = select_top_fraction(score, fraction)
     return float(y[selected].sum() / y.sum())
 
 
@@ -907,9 +925,11 @@ def make_figures(data: DataBundle, metrics: pd.DataFrame, summary: pd.DataFrame,
         risk[~item["mask"]] = np.nan
         image = ax.imshow(risk, origin="lower", extent=[builder.WEST, builder.EAST, builder.SOUTH, builder.NORTH],
                           cmap=risk_cmap, vmin=0, vmax=1, aspect="auto")
-        eligible_scores = item["scores"]["OG-RDE"][item["mask"]]
-        threshold = np.quantile(eligible_scores, .95)
-        top_grid = (item["scores"]["OG-RDE"] >= threshold) & item["mask"]
+        eligible_flat = np.flatnonzero(item["mask"].ravel())
+        eligible_scores = item["scores"]["OG-RDE"].ravel()[eligible_flat]
+        selected = select_top_fraction(eligible_scores, .05)
+        top_grid = np.zeros(builder.SHAPE, dtype=bool)
+        top_grid.ravel()[eligible_flat[selected]] = True
         ax.contour(builder.LON_GRID, builder.LAT_GRID, top_grid.astype(float), levels=[.5],
                    colors=[gold], linewidths=1.0)
         yy, xx = np.where(item["truth"] > 0)
