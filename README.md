@@ -2,6 +2,14 @@
 
 Interactive application and public research benchmark for spotted-lanternfly frontier forecasting.
 
+## Download the Mac app
+
+**[Download LanternTrace Explorer for Apple-silicon Macs](https://github.com/axel-slid/lanterntrace-explorer/releases/latest/download/LanternTrace-Explorer-macOS-Apple-Silicon.zip)**
+
+Unzip it, then drag **LanternTrace Explorer** into Applications. The app is development-signed but not Apple-notarized. On first launch, Control-click the app, choose **Open**, then choose **Open** again. No Node.js or command-line setup is required for the downloaded app.
+
+[View all releases](https://github.com/axel-slid/lanterntrace-explorer/releases) · [Read the Codex development chats](docs/codex-chats/README.md)
+
 **[Read the technical paper](output/pdf/lanterntrace-frontier-forecasting.pdf)**
 
 ![LanternTrace Explorer frozen first-report evaluation](docs/screenshot.png)
