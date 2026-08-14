@@ -82,6 +82,14 @@ EXPORTS = [
         note="The later portion of this mixed session concerned a medical-imaging app and is excluded.",
     ),
     Export(
+        "2026-08-12-openleaf-report-access.md",
+        "LanternTrace report access in OpenLeaf",
+        "2026/08/11/rollout-2026-08-11T20-57-56-019ff41e-a3e4-7f62-9663-14b103321d45.jsonl",
+        start="please find the latest canaery crest research",
+        stop="we are going to work with the microplastic paper",
+        note="Only the LanternTrace-related opening exchange is included from this mixed session.",
+    ),
+    Export(
         "2026-08-12-paper-rewrite.md",
         "Research-paper rewrite",
         "2026/08/12/rollout-2026-08-12T10-15-42-019ff6f9-032f-7550-abef-77d2a4575b9b.jsonl",

@@ -163,3 +163,7 @@ The release will be `v0.2.5` for Apple-silicon Macs with a stable “Download fo
 ## Codex
 
 The source, frozen benchmark, provenance manifest, and release PDF have all passed the project’s clean-release verifier. I’ve also scanned the exported chats for tokens, passwords, email addresses, and raw home/temp paths; none are present in the public export.
+
+## Codex
+
+The chat archive and download instructions are now committed and pushed without touching the unrelated paper edits already in the working tree. I’m uploading the verified 134 MB app bundle as the `v0.2.5` GitHub Release now.
