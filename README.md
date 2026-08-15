@@ -37,6 +37,7 @@ npm start
 
 ## What is included
 
+- A default explainability view comparing the transferred Cook-2021 literature baseline with OG-RDE, including exact cell-level rank shifts, top-5% allocation changes, regional hit gains/losses, and a clickable diffusion → climate → learned-fusion trace.
 - A default frozen-evaluation view for 2024 and 2025 first reports, fixed top-5% allocations, AP, R@5%, geographic-block intervals, and Cook et al. (2021) as a historical literature comparator.
 - Report-derived evidence envelopes and explicitly labeled reporting-gap interpolation.
 - Twenty exploratory reaction–diffusion display variants with 84 monthly evidence-assimilating steps and Settings-only 2026–2030 scenarios.

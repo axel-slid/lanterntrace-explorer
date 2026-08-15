@@ -167,3 +167,40 @@ The source, frozen benchmark, provenance manifest, and release PDF have all pass
 ## Codex
 
 The chat archive and download instructions are now committed and pushed without touching the unrelated paper edits already in the working tree. I’m uploading the verified 134 MB app bundle as the `v0.2.5` GitHub Release now.
+
+## Codex
+
+Uploaded and publicly available:
+
+- [Download LanternTrace Explorer for Apple-silicon Macs](https://github.com/axel-slid/lanterntrace-explorer/releases/latest/download/LanternTrace-Explorer-macOS-Apple-Silicon.zip)
+- [GitHub repository](https://github.com/axel-slid/lanterntrace-explorer)
+- [Codex conversation archive](https://github.com/axel-slid/lanterntrace-explorer/tree/main/docs/codex-chats)
+- [v0.2.5 release](https://github.com/axel-slid/lanterntrace-explorer/releases/tag/v0.2.5)
+
+The 134 MB app passed its release and package verification. No Node.js installation is needed. Because it is not Apple-notarized, first launch requires Control-clicking the app and selecting **Open** twice.
+
+The archive contains 12 relevant development, modeling, writing, and reviewer conversations. Private instructions, tool logs, unrelated chat sections, temporary paths, and credentials were excluded. Existing unrelated local paper edits were preserved and not uploaded.
+
+## User
+
+nah so we actaully need to make our results more explianable. please make it so the app has a visualization for results. this is  like the past sota and the (ours) models which shows exactlly which regions were liek changed and how thephyiscs worked threre
+
+## Codex
+
+I’ll add an explainability view directly to the frozen evaluation: a past-method versus “ours” comparison, regional gain/loss overlays, and a physics-contribution breakdown for each changed region. I’m tracing the existing benchmark payload and map rendering first so the visualization uses the real model outputs rather than invented explanations.
+
+## Codex
+
+The frozen artifact already contains cell-by-cell ranks for Cook‑2021, Fisher–KPP, Climate RD, and OG‑RDE, so the explanation can be exact. I’m using those to build a transparent chain—past literature proximity → local diffusion → climate-modified diffusion → observation-guided model—and will label the differences as rank contrasts, not causal feature attributions.
+
+## Codex
+
+The first implementation is in and the scientific release checks pass. I’m using the computer-control skill now to open the actual Electron build, inspect the new comparison at real window size, and test region/cell interactions visually.
+
+## Codex
+
+The visual QA shows the regional difference map is working: green cells are priorities moved up by OG‑RDE, purple cells moved down relative to Cook‑2021, outlined cells show top‑5% allocation changes, and coral rings remain the held-out first reports. I’m tightening the drill-down so clicking a region selects an actual newly captured report whenever that region has one.
+
+## Codex
+
+The final verification now checks the exact published numbers: 2024 changes from 31→36 captured reports with 15 cells reallocated; 2025 changes from 26→33 with 20 reallocated. The newly signed package also passed its runtime allowlist and embedded-paper checks.

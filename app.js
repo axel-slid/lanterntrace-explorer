@@ -6,10 +6,12 @@ const previewObservationPoints = observationPoints.filter((_, index) => index % 
 const modelBundle = window.LanternTraceModels || { metadata: {}, variants: [], topFive: [], models: {} };
 const benchmarkBundle = window.LanternTraceBenchmark || { metadata: {}, models: [], years: {} };
 let selectedModelId = modelBundle.defaultModel || modelBundle.topFive?.[0] || null;
-let selectedBenchmarkModelId = benchmarkBundle.models.find((model) => model.id === 'covariate_hazard')?.id || benchmarkBundle.models[0]?.id || null;
+let selectedBenchmarkModelId = benchmarkBundle.models.find((model) => model.id === 'og_rde')?.id || benchmarkBundle.models[0]?.id || null;
 let benchmarkYear = 2025;
 let activeLabMode = 'benchmark';
 let benchmarkComparisonEnabled = false;
+let benchmarkExplainEnabled = true;
+let selectedExplainCellIndex = null;
 
 const layers = { heatmap: true, reports: true, front: true, interpolation: true, uncertainty: false, corridors: false, sites: false };
 const latestObservedSnapshotIndex = snapshots.reduce((latest, snapshot, index) => snapshot.isProjection ? latest : index, 0);
@@ -22,6 +24,13 @@ const benchmarkColors = {
   fisher_kpp: '#a8d98b', full_mechanistic: '#d79b70', cook_2021_kernel: '#b18be3', distance_kernel: '#9ca8a2'
 };
 const benchmarkComparisonIds = ['covariate_hazard', 'og_rde', 'transport_rd', 'cook_2021_kernel'];
+const benchmarkExplainModels = { past: 'cook_2021_kernel', ours: 'og_rde', diffusion: 'fisher_kpp', climate: 'climate_rd' };
+const benchmarkExplainRegions = [
+  { id: 'great-lakes', name: 'Great Lakes + western NY', short: 'GREAT LAKES', bounds: [[-82, 41], [-76.5, 47]], contains: (longitude, latitude) => longitude < -76.5 && latitude >= 41 },
+  { id: 'appalachia', name: 'Central Appalachia', short: 'APPALACHIA', bounds: [[-82, 37], [-76.5, 41]], contains: (longitude, latitude) => longitude < -76.5 && latitude < 41 },
+  { id: 'mid-atlantic', name: 'Mid-Atlantic', short: 'MID-ATLANTIC', bounds: [[-76.5, 37], [-68, 41]], contains: (longitude, latitude) => longitude >= -76.5 && latitude < 41 },
+  { id: 'northeast', name: 'Northeast + New England', short: 'NORTHEAST', bounds: [[-76.5, 41], [-68, 47]], contains: (longitude, latitude) => longitude >= -76.5 && latitude >= 41 }
+];
 let snapshotIndex = latestObservedSnapshotIndex;
 let activeSection = 'front';
 let map;
@@ -474,6 +483,184 @@ function benchmarkTopIndices(modelId, yearData = benchmarkYearData()) {
   return new Set(ranked.map(([index]) => index));
 }
 
+function benchmarkCellCenter(index) {
+  const grid = benchmarkBundle.metadata.grid;
+  const row = Math.floor(index / grid.columns);
+  const column = index % grid.columns;
+  return [
+    grid.west + (column + .5) * grid.stepDegrees,
+    grid.south + (row + .5) * grid.stepDegrees
+  ];
+}
+
+function benchmarkExplainRegion(index) {
+  const [longitude, latitude] = benchmarkCellCenter(index);
+  return benchmarkExplainRegions.find((region) => region.contains(longitude, latitude)) || benchmarkExplainRegions.at(-1);
+}
+
+function signedRank(value) {
+  return `${value >= 0 ? '+' : ''}${value.toFixed(3)}`;
+}
+
+function benchmarkExplanationRecords(yearData = benchmarkYearData()) {
+  if (!yearData) return [];
+  const pastTop = benchmarkTopIndices(benchmarkExplainModels.past, yearData);
+  const oursTop = benchmarkTopIndices(benchmarkExplainModels.ours, yearData);
+  const truth = new Set(yearData.truthIndices);
+  return yearData.eligibleIndices.map((index) => {
+    const past = yearData.scores[benchmarkExplainModels.past]?.[index] || 0;
+    const diffusion = yearData.scores[benchmarkExplainModels.diffusion]?.[index] || 0;
+    const climate = yearData.scores[benchmarkExplainModels.climate]?.[index] || 0;
+    const ours = yearData.scores[benchmarkExplainModels.ours]?.[index] || 0;
+    const inPast = pastTop.has(index);
+    const inOurs = oursTop.has(index);
+    const category = inOurs && !inPast ? 'ours_only' : inPast && !inOurs ? 'past_only' : inOurs ? 'both' : 'neither';
+    return {
+      index, past, diffusion, climate, ours,
+      delta: ours - past,
+      magnitude: Math.abs(ours - past),
+      diffusionDelta: diffusion - past,
+      climateDelta: climate - diffusion,
+      fusionDelta: ours - climate,
+      category,
+      truth: truth.has(index),
+      region: benchmarkExplainRegion(index)
+    };
+  });
+}
+
+function benchmarkExplanationData() {
+  return {
+    type: 'FeatureCollection',
+    features: benchmarkExplanationRecords().map((record) => geojsonFeature('Polygon', [benchmarkCellPolygon(record.index)], {
+      index: record.index,
+      delta: record.delta,
+      magnitude: record.magnitude,
+      category: record.category,
+      truth: record.truth ? 1 : 0,
+      regionId: record.region.id,
+      region: record.region.name,
+      past: record.past,
+      diffusion: record.diffusion,
+      climate: record.climate,
+      ours: record.ours
+    }))
+  };
+}
+
+function benchmarkExplanationSummary(records = benchmarkExplanationRecords()) {
+  const yearData = benchmarkYearData();
+  if (!yearData) return null;
+  const truth = new Set(yearData.truthIndices);
+  const pastTop = benchmarkTopIndices(benchmarkExplainModels.past, yearData);
+  const oursTop = benchmarkTopIndices(benchmarkExplainModels.ours, yearData);
+  const hitCount = (indices) => [...indices].filter((index) => truth.has(index)).length;
+  const pastMetric = benchmarkModel(benchmarkExplainModels.past)?.metrics?.[String(benchmarkYear)];
+  const oursMetric = benchmarkModel(benchmarkExplainModels.ours)?.metrics?.[String(benchmarkYear)];
+  const regions = benchmarkExplainRegions.map((region) => {
+    const members = records.filter((record) => record.region.id === region.id);
+    const oursOnly = members.filter((record) => record.category === 'ours_only');
+    const pastOnly = members.filter((record) => record.category === 'past_only');
+    const gainedExample = oursOnly.filter((record) => record.truth).sort((left, right) => right.delta - left.delta)[0];
+    const movedExample = [...oursOnly].sort((left, right) => right.delta - left.delta)[0];
+    const largestContrast = [...members].sort((left, right) => Math.abs(right.delta) - Math.abs(left.delta))[0];
+    return {
+      ...region,
+      eligible: members.length,
+      oursOnly: oursOnly.length,
+      pastOnly: pastOnly.length,
+      gainedHits: oursOnly.filter((record) => record.truth).length,
+      lostHits: pastOnly.filter((record) => record.truth).length,
+      meanDelta: members.reduce((sum, record) => sum + record.delta, 0) / Math.max(members.length, 1),
+      representativeIndex: (gainedExample || movedExample || largestContrast)?.index
+    };
+  });
+  return {
+    pastHits: hitCount(pastTop),
+    oursHits: hitCount(oursTop),
+    reallocated: records.filter((record) => record.category === 'ours_only').length,
+    apDelta: (oursMetric?.averagePrecision || 0) - (pastMetric?.averagePrecision || 0),
+    regions
+  };
+}
+
+function ensureSelectedExplainCell(records) {
+  if (records.some((record) => record.index === selectedExplainCellIndex)) return selectedExplainCellIndex;
+  const gainedHit = records
+    .filter((record) => record.category === 'ours_only' && record.truth)
+    .sort((left, right) => right.delta - left.delta)[0];
+  const largestGain = records.sort((left, right) => right.delta - left.delta)[0];
+  selectedExplainCellIndex = (gainedHit || largestGain)?.index ?? null;
+  return selectedExplainCellIndex;
+}
+
+function physicsTraceMarkup(record) {
+  if (!record) return '';
+  const stages = [
+    { label: 'Past literature proximity', model: 'Cook-2021', score: record.past, delta: null },
+    { label: 'Local diffusion wave', model: 'Fisher–KPP', score: record.diffusion, delta: record.diffusionDelta },
+    { label: 'Climate-modified wave', model: 'Climate RD', score: record.climate, delta: record.climateDelta },
+    { label: 'Observation-guided fusion', model: 'OG-RDE (ours)', score: record.ours, delta: record.fusionDelta }
+  ];
+  const contrasts = [
+    { key: 'local diffusion', value: record.diffusionDelta },
+    { key: 'climate modification', value: record.climateDelta },
+    { key: 'observation-guided fusion', value: record.fusionDelta }
+  ].sort((left, right) => Math.abs(right.value) - Math.abs(left.value));
+  const strongest = contrasts[0];
+  return `<div class="physics-trace-head"><span>SELECTED 0.2° CELL</span><b>${record.region.short}</b></div>
+    <div class="cell-coordinate">${benchmarkCellCenter(record.index)[1].toFixed(2)}°N · ${Math.abs(benchmarkCellCenter(record.index)[0]).toFixed(2)}°W <em>${record.truth ? `${benchmarkYear} FIRST REPORT` : 'NO TARGET-YEAR FIRST REPORT'}</em></div>
+    <div class="physics-trace">${stages.map((stage, index) => `<div class="physics-step ${index === stages.length - 1 ? 'ours' : ''}">
+      <div><span>${index + 1}</span><b>${stage.model}</b><em>${stage.delta === null ? 'starting rank' : signedRank(stage.delta)}</em></div>
+      <small>${stage.label}</small><i style="--rank:${Math.max(2, stage.score * 100).toFixed(1)}%"><u></u></i><strong>${stage.score.toFixed(3)}</strong>
+    </div>`).join('')}</div>
+    <p class="trace-reading"><b>${signedRank(record.delta)} net rank shift.</b> The largest stepwise contrast here is ${strongest.key} (${signedRank(strongest.value)}).</p>
+    <p class="trace-caveat">Diagnostic rank contrasts—not causal or SHAP attribution. Each step is a separately evaluated frozen model.</p>`;
+}
+
+function renderBenchmarkExplanation() {
+  const container = $('#benchmark-explanation');
+  const button = $('#explain-benchmark-inline');
+  if (button) {
+    button.classList.toggle('active', benchmarkExplainEnabled);
+    button.setAttribute('aria-pressed', String(benchmarkExplainEnabled));
+    button.querySelector('em').textContent = benchmarkExplainEnabled ? 'ON' : 'OFF';
+  }
+  if (!container) return;
+  container.classList.toggle('hidden', !benchmarkExplainEnabled);
+  if (!benchmarkExplainEnabled) return;
+  const records = benchmarkExplanationRecords();
+  const summary = benchmarkExplanationSummary(records);
+  if (!summary) return;
+  ensureSelectedExplainCell(records);
+  const selected = records.find((record) => record.index === selectedExplainCellIndex);
+  const maxMoves = Math.max(...summary.regions.flatMap((region) => [region.oursOnly, region.pastOnly]), 1);
+  container.innerHTML = `<div class="result-comparison-head">
+      <span><i class="past"></i><small>PAST LITERATURE</small><b>Cook-2021</b></span>
+      <strong>→</strong>
+      <span><i class="ours"></i><small>OURS</small><b>OG-RDE</b></span>
+    </div>
+    <div class="result-kpis">
+      <span><small>AP CHANGE</small><b>+${summary.apDelta.toFixed(3)}</b></span>
+      <span><small>TOP-5% HITS</small><b>${summary.pastHits} → ${summary.oursHits}</b></span>
+      <span><small>CELLS MOVED IN</small><b>${summary.reallocated}</b></span>
+    </div>
+    <div class="region-change-title"><span>WHERE PRIORITIES CHANGED</span><small>click a region · then a map cell</small></div>
+    <div class="region-change-list">${summary.regions.map((region) => `<button type="button" data-explain-region="${region.id}" data-explain-cell="${region.representativeIndex}">
+      <span><b>${region.name}</b><small>${region.gainedHits ? `+${region.gainedHits} newly captured reports` : 'no newly captured reports'}${region.lostHits ? ` · −${region.lostHits} lost` : ''}</small></span>
+      <i><u class="gain" style="--move:${(region.oursOnly / maxMoves * 100).toFixed(1)}%"></u><u class="loss" style="--move:${(region.pastOnly / maxMoves * 100).toFixed(1)}%"></u></i>
+      <em><b>+${region.oursOnly}</b><small>−${region.pastOnly}</small></em>
+    </button>`).join('')}</div>
+    <div id="physics-trace-card" class="physics-trace-card">${physicsTraceMarkup(selected)}</div>`;
+  updateBenchmarkExplainSelection();
+}
+
+function updateBenchmarkExplainSelection() {
+  if (map?.getLayer('lt-benchmark-explain-selection')) {
+    map.setFilter('lt-benchmark-explain-selection', ['==', ['get', 'index'], selectedExplainCellIndex ?? -1]);
+  }
+}
+
 function benchmarkRiskData() {
   const yearData = benchmarkYearData();
   if (!yearData || !selectedBenchmarkModelId) return { type: 'FeatureCollection', features: [] };
@@ -507,17 +694,9 @@ function benchmarkAllocationData() {
 function benchmarkTruthData() {
   const yearData = benchmarkYearData();
   if (!yearData) return { type: 'FeatureCollection', features: [] };
-  const grid = benchmarkBundle.metadata.grid;
   return {
     type: 'FeatureCollection',
-    features: yearData.truthIndices.map((index) => {
-      const row = Math.floor(index / grid.columns);
-      const column = index % grid.columns;
-      return geojsonFeature('Point', [
-        grid.west + (column + .5) * grid.stepDegrees,
-        grid.south + (row + .5) * grid.stepDegrees
-      ], { year: benchmarkYear, endpoint: 'first report' });
-    })
+    features: yearData.truthIndices.map((index) => geojsonFeature('Point', benchmarkCellCenter(index), { index, year: benchmarkYear, endpoint: 'first report' }))
   };
 }
 
@@ -526,9 +705,16 @@ function updateBenchmarkMap() {
   map.getSource('lt-benchmark-risk').setData(benchmarkRiskData());
   map.getSource('lt-benchmark-allocation').setData(benchmarkAllocationData());
   map.getSource('lt-benchmark-truth').setData(benchmarkTruthData());
+  map.getSource('lt-benchmark-explanation')?.setData(benchmarkExplanationData());
   const visible = benchmarkActive();
-  ['lt-benchmark-risk-fill', 'lt-benchmark-risk-grid', 'lt-benchmark-allocation', 'lt-benchmark-truth']
-    .forEach((id) => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none'); });
+  const regularVisible = visible && !benchmarkExplainEnabled;
+  const explainVisible = visible && benchmarkExplainEnabled;
+  ['lt-benchmark-risk-fill', 'lt-benchmark-risk-grid', 'lt-benchmark-allocation']
+    .forEach((id) => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', regularVisible ? 'visible' : 'none'); });
+  ['lt-benchmark-explain-fill', 'lt-benchmark-explain-grid', 'lt-benchmark-explain-selection']
+    .forEach((id) => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', explainVisible ? 'visible' : 'none'); });
+  if (map.getLayer('lt-benchmark-truth')) map.setLayoutProperty('lt-benchmark-truth', 'visibility', visible ? 'visible' : 'none');
+  updateBenchmarkExplainSelection();
   const normalLayerIds = [
     'lt-heatmap', 'lt-heatmap-preview', 'lt-uncertainty-fill', 'lt-uncertainty-line',
     'lt-interpolation-fill', 'lt-interpolation-line', 'lt-front-fill', 'lt-front-line', 'lt-front-glow',
@@ -587,6 +773,7 @@ function renderBenchmarkLab() {
     button.classList.toggle('active', selected);
     button.setAttribute('aria-pressed', String(selected));
   });
+  renderBenchmarkExplanation();
   const compare = $('#compare-benchmark-inline');
   if (compare) {
     compare.classList.toggle('active', benchmarkComparisonEnabled);
@@ -595,21 +782,31 @@ function renderBenchmarkLab() {
   }
   const mapKey = $('.map-key');
   if (mapKey) {
-    const allocationLabels = benchmarkComparisonEnabled
-      ? benchmarkComparisonIds.map((id) => `<span><i class="allocation" style="border-color:${benchmarkColors[id]}"></i>${benchmarkModel(id)?.name || id}</span>`).join('')
-      : '<span><i class="allocation"></i>selected top 5%</span>';
-    mapKey.innerHTML = `<span><i class="risk"></i>relative rank</span>${allocationLabels}<span><i class="truth"></i>first reports</span>`;
+    if (benchmarkExplainEnabled) {
+      mapKey.innerHTML = `<span><i class="rank-up"></i>ours ranks higher</span><span><i class="rank-down"></i>past ranks higher</span><span><i class="allocation ours-only"></i>ours-only top 5%</span><span><i class="allocation past-only"></i>past-only top 5%</span><span><i class="truth"></i>first reports</span>`;
+    } else {
+      const allocationLabels = benchmarkComparisonEnabled
+        ? benchmarkComparisonIds.map((id) => `<span><i class="allocation" style="border-color:${benchmarkColors[id]}"></i>${benchmarkModel(id)?.name || id}</span>`).join('')
+        : '<span><i class="allocation"></i>selected top 5%</span>';
+      mapKey.innerHTML = `<span><i class="risk"></i>relative rank</span>${allocationLabels}<span><i class="truth"></i>first reports</span>`;
+    }
   }
   const selectedModel = benchmarkModel();
   const metric = selectedModel?.metrics?.[String(benchmarkYear)];
   const status = $('#benchmark-status');
   if (status && selectedModel && metric) {
-    status.innerHTML = `<b>Frozen first-report replay · ${benchmarkYear}</b>${selectedModel.name} · AP ${metric.averagePrecision.toFixed(3)} · R@5% ${metric.recallAt5Pct.toFixed(3)}<br><em>${yearData.truthIndices.length} first-report cells · relative rank, not occupancy probability</em>`;
+    if (benchmarkExplainEnabled) {
+      const summary = benchmarkExplanationSummary();
+      status.innerHTML = `<b>Past literature → ours · ${benchmarkYear}</b>Cook-2021 → OG-RDE · AP ${signedRank(summary.apDelta)} · top-5% hits ${summary.pastHits} → ${summary.oursHits}<br><em>${summary.reallocated} cells moved into our allocation · click any grid cell for its physics trace</em>`;
+    } else {
+      status.innerHTML = `<b>Frozen first-report replay · ${benchmarkYear}</b>${selectedModel.name} · AP ${metric.averagePrecision.toFixed(3)} · R@5% ${metric.recallAt5Pct.toFixed(3)}<br><em>${yearData.truthIndices.length} first-report cells · relative rank, not occupancy probability</em>`;
+    }
   }
 }
 
 function selectBenchmarkModel(modelId) {
   if (!benchmarkModel(modelId)) return;
+  benchmarkExplainEnabled = false;
   selectedBenchmarkModelId = modelId;
   renderBenchmarkLab();
   updateBenchmarkMap();
@@ -618,8 +815,41 @@ function selectBenchmarkModel(modelId) {
 function setBenchmarkYear(year) {
   if (!benchmarkBundle.years?.[String(year)]) return;
   benchmarkYear = Number(year);
+  selectedExplainCellIndex = null;
   renderBenchmarkLab();
   updateBenchmarkMap();
+}
+
+function toggleBenchmarkExplanation(enabled = !benchmarkExplainEnabled) {
+  benchmarkExplainEnabled = Boolean(enabled);
+  if (benchmarkExplainEnabled) {
+    selectedBenchmarkModelId = benchmarkExplainModels.ours;
+    benchmarkComparisonEnabled = false;
+    selectedExplainCellIndex = null;
+  }
+  renderBenchmarkLab();
+  updateBenchmarkMap();
+}
+
+function selectExplainCell(index, { center = true } = {}) {
+  const numericIndex = Number(index);
+  const record = benchmarkExplanationRecords().find((candidate) => candidate.index === numericIndex);
+  if (!record) return;
+  selectedExplainCellIndex = numericIndex;
+  renderBenchmarkExplanation();
+  if (center && map) map.easeTo({ center: benchmarkCellCenter(numericIndex), zoom: Math.max(map.getZoom(), 6.25), duration: 500 });
+}
+
+function benchmarkMapPadding() {
+  return { top: 72, right: 32, bottom: 82, left: window.innerWidth <= 1180 ? 452 : 472 };
+}
+
+function focusBenchmarkOverview() {
+  if (!map || !benchmarkActive()) return;
+  const grid = benchmarkBundle.metadata.grid;
+  map.fitBounds([[grid.west, grid.south], [grid.east, grid.north]], {
+    padding: benchmarkMapPadding(), duration: 650, maxZoom: 5.25
+  });
 }
 
 function setLabMode(mode) {
@@ -645,7 +875,7 @@ function setLabMode(mode) {
   updateSnapshot();
   startCorridorAnimation();
   updatePlaybackControls();
-  if (benchmarkMode && activeSection === 'methods') map?.easeTo({ center: [-75, 41.5], zoom: 4.25, duration: 650 });
+  if (benchmarkMode && activeSection === 'methods') focusBenchmarkOverview();
 }
 
 function sourceData() {
@@ -673,6 +903,7 @@ function addMapLayers() {
   map.addSource('lt-sites', { type: 'geojson', data: data.sites });
   map.addSource('lt-benchmark-risk', { type: 'geojson', data: benchmarkRiskData() });
   map.addSource('lt-benchmark-allocation', { type: 'geojson', data: benchmarkAllocationData() });
+  map.addSource('lt-benchmark-explanation', { type: 'geojson', data: benchmarkExplanationData() });
   map.addSource('lt-benchmark-truth', { type: 'geojson', data: benchmarkTruthData() });
 
   map.addLayer({ id: 'lt-heatmap', type: 'heatmap', source: 'lt-reports', maxzoom: 6.5, filter: observationFilter, paint: {
@@ -699,6 +930,18 @@ function addMapLayers() {
     'line-width': ['case', ['==', ['get', 'selected'], 1], 2.5, 1.4],
     'line-opacity': ['case', ['==', ['get', 'selected'], 1], .98, .76]
   } });
+  map.addLayer({ id: 'lt-benchmark-explain-fill', type: 'fill', source: 'lt-benchmark-explanation', layout: { visibility: 'none' }, paint: {
+    'fill-color': ['interpolate', ['linear'], ['get', 'delta'], -.65, '#b57be8', -.05, '#5c5875', 0, '#163a30', .05, '#397f6a', .65, '#52edb6'],
+    'fill-opacity': ['interpolate', ['linear'], ['get', 'magnitude'], 0, .06, .04, .16, .16, .46, .45, .78]
+  } });
+  map.addLayer({ id: 'lt-benchmark-explain-grid', type: 'line', source: 'lt-benchmark-explanation', layout: { visibility: 'none' }, paint: {
+    'line-color': ['match', ['get', 'category'], 'ours_only', '#74f4c2', 'past_only', '#d89bf4', 'both', '#e7d86e', '#638979'],
+    'line-width': ['match', ['get', 'category'], 'ours_only', 2.3, 'past_only', 2.3, 'both', 1.2, .25],
+    'line-opacity': ['match', ['get', 'category'], 'ours_only', .98, 'past_only', .98, 'both', .72, .22]
+  } });
+  map.addLayer({ id: 'lt-benchmark-explain-selection', type: 'line', source: 'lt-benchmark-explanation', filter: ['==', ['get', 'index'], -1], layout: { visibility: 'none' }, paint: {
+    'line-color': '#ffffff', 'line-width': 3.5, 'line-opacity': 1, 'line-blur': .15
+  } });
   map.addLayer({ id: 'lt-benchmark-truth', type: 'circle', source: 'lt-benchmark-truth', layout: { visibility: 'none' }, paint: {
     'circle-color': 'rgba(4, 18, 14, .12)', 'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, 3.5, 7, 7],
     'circle-stroke-color': '#ff907d', 'circle-stroke-width': 2, 'circle-opacity': .98
@@ -719,6 +962,15 @@ function addMapLayers() {
   map.addLayer({ id: 'lt-report-hit', type: 'circle', source: 'lt-reports', minzoom: 5.5, filter: observationFilter, paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 5.5, 6, 8, 8, 11, 11], 'circle-opacity': 0.01, 'circle-color': '#ffffff' } });
   map.addLayer({ id: 'lt-reports-preview', type: 'circle', source: 'lt-reports-preview', filter: observationFilter, layout: { visibility: 'none' }, paint: { 'circle-color': '#9be7c5', 'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 0.65, 4.75, 1.2, 8, 3, 11, 4.8], 'circle-stroke-color': '#d0f4e1', 'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 2, 0, 4.75, 0.25, 8, 0.55], 'circle-opacity': ['interpolate', ['linear'], ['zoom'], 2, 0.34, 4.75, 0.62, 8, 0.8] } });
   map.addLayer({ id: 'lt-sites', type: 'circle', source: 'lt-sites', paint: { 'circle-color': '#c8ff79', 'circle-radius': 6, 'circle-stroke-color': '#e8ffd2', 'circle-stroke-width': 1.5, 'circle-opacity': 0.9 } });
+
+  map.on('click', 'lt-benchmark-explain-fill', (event) => {
+    if (!benchmarkExplainEnabled || !event.features?.length) return;
+    selectExplainCell(event.features[0].properties.index, { center: false });
+  });
+  map.on('mouseenter', 'lt-benchmark-explain-fill', () => {
+    if (benchmarkExplainEnabled) map.getCanvas().style.cursor = 'crosshair';
+  });
+  map.on('mouseleave', 'lt-benchmark-explain-fill', () => { map.getCanvas().style.cursor = ''; });
 
   map.on('click', 'lt-report-hit', async (event) => {
     const feature = event.features[0];
@@ -1143,6 +1395,7 @@ function switchSection(section) {
   if (map?.getSource('lt-front')) updateSnapshot();
   else updateModelComparison();
   updateBenchmarkMap();
+  if (section === 'methods' && benchmarkActive()) focusBenchmarkOverview();
   syncForecastSettingsUI();
 }
 
@@ -1214,7 +1467,25 @@ function toggleSidebar() {
 
 function downloadSnapshot() {
   const snapshot = snapshots[snapshotIndex];
-  const frozen = benchmarkActive() ? { year: benchmarkYear, selectedModel: benchmarkModel(), yearData: benchmarkYearData(), comparedModelIds: benchmarkComparisonEnabled ? benchmarkComparisonIds : [selectedBenchmarkModelId] } : null;
+  const explanationRecords = benchmarkExplainEnabled ? benchmarkExplanationRecords() : [];
+  const explanationSummary = benchmarkExplainEnabled ? benchmarkExplanationSummary(explanationRecords) : null;
+  const frozen = benchmarkActive() ? {
+    year: benchmarkYear,
+    selectedModel: benchmarkModel(),
+    yearData: benchmarkYearData(),
+    comparedModelIds: benchmarkComparisonEnabled ? benchmarkComparisonIds : [selectedBenchmarkModelId],
+    explanation: explanationSummary ? {
+      pastModelId: benchmarkExplainModels.past,
+      oursModelId: benchmarkExplainModels.ours,
+      apDelta: explanationSummary.apDelta,
+      pastTop5Hits: explanationSummary.pastHits,
+      oursTop5Hits: explanationSummary.oursHits,
+      reallocatedCells: explanationSummary.reallocated,
+      regions: explanationSummary.regions.map(({ id, name, eligible, oursOnly, pastOnly, gainedHits, lostHits, meanDelta }) => ({ id, name, eligible, oursOnly, pastOnly, gainedHits, lostHits, meanDelta })),
+      selectedCell: explanationRecords.find((record) => record.index === selectedExplainCellIndex) || null,
+      interpretation: 'Stepwise frozen-model rank contrasts; not causal or SHAP attribution.'
+    } : null
+  } : null;
   const payload = { app: 'LanternTrace Explorer', generatedAt: new Date().toISOString(), mode: frozen ? 'frozen-first-report-replay' : 'evidence-or-scenario-display', frozenEvaluation: frozen, snapshot: frozen ? undefined : snapshot, selectedScenarioVariant: frozen ? undefined : selectedModelRanking(), modelMetadata: frozen ? benchmarkBundle.metadata : modelBundle.metadata, layers, caveat: 'Presence-only retrospective prototype; relative risks are not occupancy probabilities; not independent field validation or operational guidance.' };
   const link = document.createElement('a');
   link.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
@@ -1287,7 +1558,24 @@ function setupInteractions() {
   $('#benchmark-mode')?.addEventListener('click', () => setLabMode('benchmark'));
   $('#scenario-mode')?.addEventListener('click', () => setLabMode('scenario'));
   $$('.benchmark-year button').forEach((button) => button.addEventListener('click', () => setBenchmarkYear(button.dataset.benchmarkYear)));
-  $('#compare-benchmark-inline')?.addEventListener('click', () => { benchmarkComparisonEnabled = !benchmarkComparisonEnabled; renderBenchmarkLab(); updateBenchmarkMap(); });
+  $('#explain-benchmark-inline')?.addEventListener('click', () => toggleBenchmarkExplanation());
+  $('#compare-benchmark-inline')?.addEventListener('click', () => {
+    if (benchmarkExplainEnabled) {
+      benchmarkExplainEnabled = false;
+      benchmarkComparisonEnabled = true;
+    } else {
+      benchmarkComparisonEnabled = !benchmarkComparisonEnabled;
+    }
+    renderBenchmarkLab();
+    updateBenchmarkMap();
+  });
+  $('#benchmark-explanation')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-explain-region]');
+    if (!button) return;
+    const region = benchmarkExplainRegions.find((candidate) => candidate.id === button.dataset.explainRegion);
+    selectExplainCell(button.dataset.explainCell, { center: false });
+    if (region && map) map.fitBounds(region.bounds, { padding: benchmarkMapPadding(), duration: 650, maxZoom: 6.2 });
+  });
   $('#benchmark-ranking')?.addEventListener('click', (event) => {
     const button = event.target.closest('[data-benchmark-model-id]');
     if (button) selectBenchmarkModel(button.dataset.benchmarkModelId);
