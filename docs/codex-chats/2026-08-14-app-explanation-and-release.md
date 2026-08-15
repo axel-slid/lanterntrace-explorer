@@ -906,3 +906,35 @@ I’m checking the exact public URL without a cache-busting query and the domain
 ## Codex
 
 The clean public URL is serving the new version right now: both `alex-dils.com` and `www.alex-dils.com` return “Tracing Lanternfly Invasion” and the `?embed=physics` iframe. I’m checking the production alias itself and will give you a direct map-only URL as well, so we can distinguish a stale open tab from a deployment issue.
+
+## Codex
+
+It is live—the open tab is likely cached.
+
+Open this cache-busted page:  
+[LanternTrace updated page](https://www.alex-dils.com/lanterntrace/?v=physics-map)
+
+Direct map-only embed:  
+[OG-RDE physics map](https://www.alex-dils.com/lanterntrace/app/?embed=physics)
+
+The production alias is confirmed active. If your existing tab remains old, press `Cmd + Shift + R` once.
+
+## User
+
+ts not working
+
+## Codex
+
+I’m treating this as a real runtime failure, not a refresh problem. I’m tracing the focused embed’s initialization and production asset requests now; if the specialized mode is the unstable part, I’ll replace it with a simpler map-only implementation that cannot depend on hidden desktop controls.
+
+## User
+
+https://www.alex-dils.com/lanterntrace
+
+## Codex
+
+Got it—I was solving the wrong problem. You want that focused physics view used as a clean hero preview, not another embedded application mode. I’m replacing the iframe with the exact map image you supplied, making the entire preview link to the full application, and removing the loading/embed machinery from the project page.
+
+## Codex
+
+I’ve removed the fragile hero iframe entirely. The hero now uses the exact physics-map image you sent as a lightweight, immediate preview; clicking anywhere on it—or “Open full screen”—opens the complete LanternTrace app. There is no embedded app initialization left to fail on the landing page.
