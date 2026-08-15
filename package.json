@@ -1,6 +1,6 @@
 {
   "name": "lanterntrace-explorer",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Electron prototype for exploring spotted lanternfly invasion-front evidence.",
   "author": "LanternTrace Explorer contributors",
   "main": "main.js",
@@ -13,7 +13,8 @@
     "model:test": "python3 scripts/build-diffusion-model.py --verify",
     "pack": "npm run verify:release && electron-builder --dir && npm run verify:package",
     "verify:explanation": "node scripts/verify-explanation.cjs",
-    "verify:release": "node --check app.js && node --check generated/model-results.js && node --check generated/frozen-benchmark.js && npm run verify:explanation && python3 research/verify_release.py",
+    "verify:physics": "node scripts/verify-physics-view.cjs",
+    "verify:release": "node --check app.js && node --check generated/model-results.js && node --check generated/frozen-benchmark.js && npm run verify:explanation && npm run verify:physics && python3 research/verify_release.py",
     "verify:package": "node scripts/verify-packaged-app.cjs"
   },
   "devDependencies": {

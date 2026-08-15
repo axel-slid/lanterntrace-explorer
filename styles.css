@@ -577,6 +577,9 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
 #benchmark-detail .benchmark-stat-grid b { color: #e4fff0; font-size: 11px; }
 .explain-result-inline { border-color: rgba(100, 232, 188, .27); background: linear-gradient(90deg, rgba(93, 70, 130, .18), rgba(35, 125, 94, .16)); }
 .explain-result-inline .compare-icon { color: #aef3d4; }
+.physics-view-inline { border-color: rgba(223, 239, 112, .3); background: linear-gradient(90deg, rgba(105, 150, 61, .14), rgba(30, 105, 90, .18)); }
+.physics-view-inline .compare-icon { color: #e6f58e; font-size: 18px; }
+.physics-view-inline.active { border-color: rgba(222, 244, 118, .7); background: linear-gradient(90deg, rgba(169, 216, 83, .2), rgba(55, 174, 132, .22)); box-shadow: inset 2px 0 #e4f57f; }
 .benchmark-explanation { margin: 8px 0 11px; overflow: hidden; border: 1px solid rgba(121, 240, 196, .2); border-radius: 9px; background: rgba(2, 25, 19, .48); }
 .result-comparison-head { display: grid; grid-template-columns: 1fr 22px 1fr; gap: 6px; align-items: center; padding: 10px 11px; border-bottom: 1px solid rgba(121, 240, 196, .13); }
 .result-comparison-head > span { display: grid; grid-template-columns: 8px 1fr; gap: 1px 6px; align-items: center; }
@@ -637,6 +640,9 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
 .map-key .rank-down { background: linear-gradient(90deg, rgba(92, 88, 117, .25), #b57be8); }
 .map-key .allocation.ours-only { border-color: #74f4c2; }
 .map-key .allocation.past-only { border-color: #d89bf4; }
+.map-key .physics-surface { background: linear-gradient(90deg, #286a62, #a8e875, #f0f58a); }
+.map-key .physics-front { height: 3px; border-radius: 2px; background: #f2ef83; box-shadow: 0 0 5px rgba(242, 239, 131, .65); }
+.map-key .physics-vector { width: auto; height: auto; color: #d8f58e; font: 700 13px 'DM Mono', monospace; font-style: normal; }
 .paper-link { display: block; margin: 9px 0; padding: 9px 10px; border: 1px solid rgba(151, 229, 124, .25); border-radius: 7px; background: rgba(117, 184, 87, .08); color: #cef294; font: 600 9px 'DM Mono', monospace; text-decoration: none; }
 .paper-link:hover { background: rgba(117, 184, 87, .16); color: #edffc2; }
 #methods-panel .small-note { color: #8bad9f; font-size: 9px; line-height: 1.55; }
@@ -672,6 +678,27 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
 .benchmark-status { position: absolute; z-index: 5; top: 72px; right: 18px; max-width: 380px; padding: 10px 12px; border: 1px solid rgba(121, 240, 196, .24); border-radius: 9px; background: rgba(3, 31, 24, .9); color: #a9cebd; font: 9px/1.45 'DM Mono', monospace; pointer-events: none; }
 .benchmark-status b { display: block; margin-bottom: 2px; color: #e9fff3; font-size: 11px; }
 .benchmark-status em { color: #dfd66f; font-style: normal; }
+.physics-hud { position: absolute; z-index: 7; bottom: 78px; left: 458px; width: min(510px, calc(100% - 488px)); padding: 12px 13px; border: 1px solid rgba(213, 239, 115, .35); border-radius: 10px; background: linear-gradient(145deg, rgba(4, 34, 27, .95), rgba(8, 45, 39, .9)); color: #b9d9ca; box-shadow: 0 14px 36px rgba(0, 0, 0, .28); backdrop-filter: blur(10px); }
+.physics-hud-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.physics-hud-head > div { display: grid; gap: 2px; }
+.physics-hud-head span { color: #91bda8; font: 600 9px 'DM Mono', monospace; letter-spacing: .08em; }
+.physics-hud-head b { color: #efffb2; font: 600 15px 'Barlow Condensed', sans-serif; letter-spacing: .03em; }
+.physics-hud-head button { width: 36px; height: 30px; border: 1px solid rgba(218, 242, 124, .35); border-radius: 7px; background: rgba(145, 190, 80, .12); color: #e9f995; font: 700 14px 'DM Mono', monospace; }
+.physics-model-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-top: 9px; }
+.physics-model-options button, .physics-display-options button { min-height: 28px; padding: 4px 5px; border: 1px solid rgba(121, 240, 196, .14); border-radius: 6px; background: rgba(2, 26, 21, .58); color: #8db5a3; font: 600 8px/1.15 'DM Mono', monospace; }
+.physics-model-options button.active, .physics-display-options button.active { border-color: rgba(220, 244, 116, .62); background: rgba(161, 204, 80, .17); color: #eeffb1; box-shadow: inset 0 -2px #d9ef79; }
+.physics-display-options { display: flex; gap: 4px; margin-top: 6px; }
+.physics-display-options button { min-width: 94px; }
+.physics-key { display: flex; flex-wrap: wrap; gap: 6px 13px; margin-top: 9px; color: #89ab9c; font: 8px 'DM Mono', monospace; }
+.physics-key span { display: inline-flex; align-items: center; gap: 5px; }
+.physics-key i { display: inline-block; width: 15px; height: 6px; border-radius: 2px; font-style: normal; }
+.physics-key .physics-low { background: #286a62; }
+.physics-key .physics-high { background: #e6f284; box-shadow: 0 0 6px rgba(230, 242, 132, .42); }
+.physics-key .physics-front { height: 2px; background: #f2ef83; }
+.physics-key .physics-vector { width: auto; height: auto; color: #e4f58b; font-size: 12px; }
+.physics-hud > small { display: block; margin-top: 8px; color: #d7ec8b; font: 9px/1.3 'DM Mono', monospace; }
+.physics-hud > p { margin: 6px 0 0; color: #779d8c; font: 8px/1.4 'DM Mono', monospace; }
+.physics-hud > p b { color: #a9d7bf; font-weight: 600; }
 
 @media (max-width: 980px) {
   .map-header .search-wrap { width: 38px; padding: 0; justify-content: center; }
@@ -679,6 +706,8 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
   .map-export { min-width: 38px; width: 38px; padding: 0; overflow: hidden; font-size: 0; }
   .map-export::before { content: '⇩'; font-size: 16px; }
   .timeline-track { right: 232px; }
+  .physics-hud { left: 438px; width: calc(100% - 456px); }
+  .physics-model-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 /* Professional usability pass: readable model workspace and persistent scientific status. */
@@ -740,6 +769,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
   .prototype-badge { max-width: 275px; white-space: normal; text-align: right; }
   .methods-active .sidebar { width: 420px; }
   .methods-active .timeline-dock { left: 420px; }
+  .physics-hud { left: 438px; width: min(510px, calc(100% - 456px)); }
 }
 
 /* Minimum legibility outside the model lab. */

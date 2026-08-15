@@ -256,3 +256,42 @@ The checks pass, and the labels distinguish provenance without implying that “
 ## Codex
 
 The packaged v0.3.1 UI now renders the ownership chips correctly in the actual app—not just in source: “OURS · PRIMARY,” “OURS · CONTROL,” “OURS · PHYSICS,” “PAST LITERATURE,” and baseline labels are all visible and accessible. I’m preparing the downloadable release and refreshing the repository’s sanitized Codex-chat archive.
+
+## Codex
+
+The labeled build has passed syntax, scientific-result, clean-package, archive-integrity, and macOS code-signature checks. The source and refreshed chat archive are now on GitHub; I’m publishing the signed v0.3.1 download as the new latest release.
+
+## Codex
+
+Done and published as v0.3.1.
+
+Labels now shown throughout the rankings, comparison view, map status, and physics trace:
+
+- OG‑RDE — `OURS · PRIMARY`
+- Covariate hazard — `OURS · CONTROL`
+- Climate/Transport/Full mechanistic — `OURS · PHYSICS`
+- Cook‑2021 — `PAST LITERATURE`
+- Fisher‑KPP — `CLASSIC BASELINE`
+- Distance kernel — `SIMPLE BASELINE`
+
+[Download LanternTrace Explorer v0.3.1](https://github.com/axel-slid/lanterntrace-explorer/releases/latest/download/LanternTrace-Explorer-macOS-Apple-Silicon.zip)
+
+[View the GitHub release](https://github.com/axel-slid/lanterntrace-explorer/releases/tag/v0.3.1)
+
+The signed package passed release verification, and the sanitized Codex-chat archive was refreshed. Unrelated local paper edits were preserved.
+
+## User
+
+make it so that i can toggle a physics view which will hsow the growth based on what the pyiscs model does so like the difffernt like surfaces and the vectors idk
+
+## Codex
+
+I’m adding a real “Physics View” toggle to the diffusion-model lab: an animated spread surface, direction/velocity vectors, and model-specific transport behavior tied to the selected physics model and year. I’m using the visualization skill because this is an interactive scientific visual, and I’ll keep it explicitly labeled as a model diagnostic—not observed growth.
+
+## Codex
+
+The feature is now wired to the exact frozen model fields: the raised/flat surface comes from each model’s 0.2° relative-pressure grid, the arrows are computed local score gradients, and the moving front is a threshold sweep across that field. I’m validating the model-specific surfaces and vector calculations next, including reduced-motion behavior and the scientific caveat that this is not literal elapsed-time growth.
+
+## Codex
+
+The automated checks pass for all five physics surfaces and both frozen years. I’m using the computer-control skill now to open the Electron build and inspect the real MapLibre rendering—especially the 3D extrusion, vector legibility, controls, and any runtime errors that static checks cannot catch.

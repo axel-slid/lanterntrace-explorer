@@ -37,6 +37,7 @@ npm start
 
 ## What is included
 
+- A toggleable Physics Field View for Fisher–KPP, Climate RD, Transport RD, Full mechanistic, and OG-RDE, with animated growth-style threshold sweeps, switchable 3D/2D relative-pressure surfaces, and local finite-difference gradient vectors. It is explicitly diagnostic—not abundance, calibrated velocity, or elapsed forecast time.
 - A default explainability view comparing the transferred Cook-2021 literature baseline with OG-RDE, including exact cell-level rank shifts, top-5% allocation changes, regional hit gains/losses, and a clickable diffusion → climate → learned-fusion trace.
 - A default frozen-evaluation view for 2024 and 2025 first reports, fixed top-5% allocations, AP, R@5%, geographic-block intervals, and Cook et al. (2021) as a historical literature comparator.
 - Report-derived evidence envelopes and explicitly labeled reporting-gap interpolation.

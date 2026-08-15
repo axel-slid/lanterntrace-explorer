@@ -12,6 +12,12 @@ let activeLabMode = 'benchmark';
 let benchmarkComparisonEnabled = false;
 let benchmarkExplainEnabled = true;
 let selectedExplainCellIndex = null;
+let physicsViewEnabled = false;
+let physicsAnimationPlaying = true;
+let physicsDisplayMode = 'height';
+let physicsPhase = .42;
+let physicsAnimationFrame;
+let physicsAnimationLast = 0;
 
 const layers = { heatmap: true, reports: true, front: true, interpolation: true, uncertainty: false, corridors: false, sites: false };
 const latestObservedSnapshotIndex = snapshots.reduce((latest, snapshot, index) => snapshot.isProjection ? latest : index, 0);
@@ -35,6 +41,14 @@ const benchmarkOwnership = {
 };
 const benchmarkComparisonIds = ['covariate_hazard', 'og_rde', 'transport_rd', 'cook_2021_kernel'];
 const benchmarkExplainModels = { past: 'cook_2021_kernel', ours: 'og_rde', diffusion: 'fisher_kpp', climate: 'climate_rd' };
+const physicsModelIds = ['fisher_kpp', 'climate_rd', 'transport_rd', 'full_mechanistic', 'og_rde'];
+const physicsProfiles = {
+  fisher_kpp: { short: 'FISHER–KPP', mechanism: 'local diffusion + logistic growth', terms: 'D∇u + ru(1−u)' },
+  climate_rd: { short: 'CLIMATE RD', mechanism: 'climate-varying diffusion and growth', terms: 'D(x)∇u + r(x)u(1−u)' },
+  transport_rd: { short: 'TRANSPORT RD', mechanism: 'local diffusion + directional transport', terms: 'D∇u + J + A' },
+  full_mechanistic: { short: 'FULL MECHANISTIC', mechanism: 'climate, barriers, satellites, and transport', terms: 'D(x)∇u + r(x)u(1−u) + J + A' },
+  og_rde: { short: 'OG-RDE · OURS', mechanism: 'observation-guided fusion of mechanistic fields', terms: 'f(front, habitat, Fisher–KPP, Climate RD)' }
+};
 const benchmarkExplainRegions = [
   { id: 'great-lakes', name: 'Great Lakes + western NY', short: 'GREAT LAKES', bounds: [[-82, 41], [-76.5, 47]], contains: (longitude, latitude) => longitude < -76.5 && latitude >= 41 },
   { id: 'appalachia', name: 'Central Appalachia', short: 'APPALACHIA', bounds: [[-82, 37], [-76.5, 41]], contains: (longitude, latitude) => longitude < -76.5 && latitude < 41 },
@@ -710,20 +724,183 @@ function benchmarkTruthData() {
   };
 }
 
+function physicsThreshold() {
+  return .95 - physicsPhase * .7;
+}
+
+function physicsSurfaceData() {
+  const yearData = benchmarkYearData();
+  const scores = yearData?.scores?.[selectedBenchmarkModelId];
+  if (!yearData || !scores) return { type: 'FeatureCollection', features: [] };
+  return {
+    type: 'FeatureCollection',
+    features: yearData.eligibleIndices.map((index) => geojsonFeature('Polygon', [benchmarkCellPolygon(index)], {
+      index,
+      risk: scores[index] || 0,
+      modelId: selectedBenchmarkModelId,
+      year: benchmarkYear
+    }))
+  };
+}
+
+function physicsVectorData() {
+  const yearData = benchmarkYearData();
+  const grid = benchmarkBundle.metadata.grid;
+  const scores = yearData?.scores?.[selectedBenchmarkModelId];
+  if (!yearData || !grid || !scores) return { type: 'FeatureCollection', features: [] };
+  const eligible = new Set(yearData.eligibleIndices);
+  const samples = [];
+  const scoreAt = (index, fallback) => eligible.has(index) ? (scores[index] || 0) : fallback;
+  yearData.eligibleIndices.forEach((index) => {
+    const row = Math.floor(index / grid.columns);
+    const column = index % grid.columns;
+    if (row % 3 !== 1 || column % 3 !== 1) return;
+    const center = scores[index] || 0;
+    const west = column > 0 ? scoreAt(index - 1, center) : center;
+    const east = column < grid.columns - 1 ? scoreAt(index + 1, center) : center;
+    const south = row > 0 ? scoreAt(index - grid.columns, center) : center;
+    const north = row < grid.rows - 1 ? scoreAt(index + grid.columns, center) : center;
+    const dx = (east - west) / 2;
+    const dy = (north - south) / 2;
+    const magnitude = Math.hypot(dx, dy);
+    if (magnitude < .012) return;
+    const angle = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+    const arrows = ['→', '↗', '↑', '↖', '←', '↙', '↓', '↘'];
+    samples.push({ index, magnitude, arrow: arrows[Math.round(angle / 45) % 8], risk: center });
+  });
+  const ceiling = Math.max(...samples.map((sample) => sample.magnitude), .001);
+  return {
+    type: 'FeatureCollection',
+    features: samples.map((sample) => geojsonFeature('Point', benchmarkCellCenter(sample.index), {
+      ...sample,
+      strength: sample.magnitude / ceiling
+    }))
+  };
+}
+
+function renderPhysicsFrame() {
+  if (!map || !physicsViewEnabled) return;
+  const threshold = physicsThreshold();
+  const activeColor = ['interpolate', ['linear'], ['get', 'risk'], 0, '#173a35', .35, '#286a62', .62, '#45b990', .82, '#a8e875', 1, '#f0f58a'];
+  const fieldColor = ['case', ['>=', ['get', 'risk'], threshold], activeColor, 'rgba(12, 45, 39, .34)'];
+  if (map.getLayer('lt-physics-field')) map.setPaintProperty('lt-physics-field', 'fill-color', fieldColor);
+  if (map.getLayer('lt-physics-height')) map.setPaintProperty('lt-physics-height', 'fill-extrusion-color', fieldColor);
+  if (map.getLayer('lt-physics-front')) map.setFilter('lt-physics-front', [
+    'all', ['>=', ['get', 'risk'], Math.max(0, threshold - .022)], ['<=', ['get', 'risk'], Math.min(1, threshold + .022)]
+  ]);
+  const state = $('#physics-hud-state');
+  if (state) state.textContent = `Growth-style sweep ${Math.round(physicsPhase * 100)}% · active threshold ≥ ${threshold.toFixed(2)} relative rank.`;
+}
+
+function startPhysicsAnimation() {
+  cancelAnimationFrame(physicsAnimationFrame);
+  renderPhysicsFrame();
+  if (!physicsViewEnabled || !benchmarkActive() || !physicsAnimationPlaying || document.hidden || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const animate = (timestamp) => {
+    if (!physicsViewEnabled || !benchmarkActive() || !physicsAnimationPlaying || document.hidden) return;
+    if (!physicsAnimationLast) physicsAnimationLast = timestamp;
+    if (timestamp - physicsAnimationLast >= 58) {
+      physicsPhase = (physicsPhase + (timestamp - physicsAnimationLast) / 9000) % 1;
+      physicsAnimationLast = timestamp;
+      renderPhysicsFrame();
+    }
+    physicsAnimationFrame = requestAnimationFrame(animate);
+  };
+  physicsAnimationFrame = requestAnimationFrame(animate);
+}
+
+function renderPhysicsHUD() {
+  const hud = $('#physics-hud');
+  const toggle = $('#physics-view-inline');
+  if (toggle) {
+    toggle.classList.toggle('active', physicsViewEnabled);
+    toggle.setAttribute('aria-pressed', String(physicsViewEnabled));
+    toggle.querySelector('em').textContent = physicsViewEnabled ? 'ON' : 'OFF';
+  }
+  if (!hud) return;
+  $('.app-shell')?.classList.toggle('physics-mode', physicsViewEnabled && benchmarkActive());
+  hud.classList.toggle('hidden', !physicsViewEnabled || !benchmarkActive());
+  const model = benchmarkModel();
+  const profile = physicsProfiles[selectedBenchmarkModelId];
+  const modelLabel = $('#physics-hud-model');
+  if (modelLabel && model && profile) modelLabel.textContent = `${profile.short} · ${benchmarkYear}`;
+  const options = $('#physics-model-options');
+  if (options) options.innerHTML = physicsModelIds.map((modelId) => {
+    const candidate = benchmarkModel(modelId);
+    const active = modelId === selectedBenchmarkModelId;
+    return `<button type="button" data-physics-model="${modelId}" class="${active ? 'active' : ''}" aria-pressed="${active}">${candidate?.name || modelId}</button>`;
+  }).join('');
+  $$('.physics-display-options button').forEach((button) => {
+    const active = button.dataset.physicsDisplay === physicsDisplayMode;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+  const play = $('#physics-play');
+  if (play) {
+    play.textContent = physicsAnimationPlaying ? 'Ⅱ' : '▶';
+    play.setAttribute('aria-label', physicsAnimationPlaying ? 'Pause physics growth sweep' : 'Play physics growth sweep');
+  }
+  const mechanism = hud.querySelector('p');
+  if (mechanism && profile) mechanism.innerHTML = `<b>${profile.terms}</b> · ${profile.mechanism}. Diagnostic rank field—not abundance, calibrated velocity, or a literal time forecast.`;
+  renderPhysicsFrame();
+}
+
+function updatePhysicsMap() {
+  map?.getSource('lt-physics-surface')?.setData(physicsSurfaceData());
+  map?.getSource('lt-physics-vectors')?.setData(physicsVectorData());
+  renderPhysicsFrame();
+}
+
+function setPhysicsDisplay(mode) {
+  physicsDisplayMode = mode === 'field' ? 'field' : 'height';
+  if (map) {
+    const visible = physicsViewEnabled && benchmarkActive();
+    if (map.getLayer('lt-physics-field')) map.setLayoutProperty('lt-physics-field', 'visibility', visible && physicsDisplayMode === 'field' ? 'visible' : 'none');
+    if (map.getLayer('lt-physics-height')) map.setLayoutProperty('lt-physics-height', 'visibility', visible && physicsDisplayMode === 'height' ? 'visible' : 'none');
+    map.easeTo({ pitch: physicsDisplayMode === 'height' && visible ? 43 : 0, bearing: physicsDisplayMode === 'height' && visible ? -8 : 0, duration: 500 });
+  }
+  renderPhysicsHUD();
+}
+
+function togglePhysicsView(force) {
+  physicsViewEnabled = typeof force === 'boolean' ? force : !physicsViewEnabled;
+  if (physicsViewEnabled) {
+    benchmarkExplainEnabled = false;
+    benchmarkComparisonEnabled = false;
+    if (!physicsModelIds.includes(selectedBenchmarkModelId)) selectedBenchmarkModelId = 'og_rde';
+    physicsAnimationPlaying = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    physicsAnimationLast = 0;
+  } else {
+    physicsAnimationPlaying = false;
+    cancelAnimationFrame(physicsAnimationFrame);
+  }
+  renderBenchmarkLab();
+  updatePhysicsMap();
+  updateBenchmarkMap();
+  setPhysicsDisplay(physicsDisplayMode);
+  startPhysicsAnimation();
+}
+
 function updateBenchmarkMap() {
   if (!map?.getSource('lt-benchmark-risk')) return;
   map.getSource('lt-benchmark-risk').setData(benchmarkRiskData());
   map.getSource('lt-benchmark-allocation').setData(benchmarkAllocationData());
   map.getSource('lt-benchmark-truth').setData(benchmarkTruthData());
   map.getSource('lt-benchmark-explanation')?.setData(benchmarkExplanationData());
+  updatePhysicsMap();
   const visible = benchmarkActive();
-  const regularVisible = visible && !benchmarkExplainEnabled;
-  const explainVisible = visible && benchmarkExplainEnabled;
+  const physicsVisible = visible && physicsViewEnabled;
+  const regularVisible = visible && !benchmarkExplainEnabled && !physicsViewEnabled;
+  const explainVisible = visible && benchmarkExplainEnabled && !physicsViewEnabled;
   ['lt-benchmark-risk-fill', 'lt-benchmark-risk-grid', 'lt-benchmark-allocation']
     .forEach((id) => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', regularVisible ? 'visible' : 'none'); });
   ['lt-benchmark-explain-fill', 'lt-benchmark-explain-grid', 'lt-benchmark-explain-selection']
     .forEach((id) => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', explainVisible ? 'visible' : 'none'); });
-  if (map.getLayer('lt-benchmark-truth')) map.setLayoutProperty('lt-benchmark-truth', 'visibility', visible ? 'visible' : 'none');
+  if (map.getLayer('lt-benchmark-truth')) map.setLayoutProperty('lt-benchmark-truth', 'visibility', visible && !physicsVisible ? 'visible' : 'none');
+  if (map.getLayer('lt-physics-field')) map.setLayoutProperty('lt-physics-field', 'visibility', physicsVisible && physicsDisplayMode === 'field' ? 'visible' : 'none');
+  if (map.getLayer('lt-physics-height')) map.setLayoutProperty('lt-physics-height', 'visibility', physicsVisible && physicsDisplayMode === 'height' ? 'visible' : 'none');
+  ['lt-physics-grid', 'lt-physics-front', 'lt-physics-vectors']
+    .forEach((id) => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', physicsVisible ? 'visible' : 'none'); });
   updateBenchmarkExplainSelection();
   const normalLayerIds = [
     'lt-heatmap', 'lt-heatmap-preview', 'lt-uncertainty-fill', 'lt-uncertainty-line',
@@ -739,6 +916,8 @@ function updateBenchmarkMap() {
   }
   const status = $('#benchmark-status');
   if (status) status.classList.toggle('hidden', !visible);
+  renderPhysicsHUD();
+  if (physicsVisible) startPhysicsAnimation();
 }
 
 function renderBenchmarkLab() {
@@ -794,7 +973,9 @@ function renderBenchmarkLab() {
   }
   const mapKey = $('.map-key');
   if (mapKey) {
-    if (benchmarkExplainEnabled) {
+    if (physicsViewEnabled) {
+      mapKey.innerHTML = `<span><i class="physics-surface"></i>relative-pressure surface</span><span><i class="physics-front"></i>animated threshold front</span><span><i class="physics-vector">↗</i>local score gradient</span>`;
+    } else if (benchmarkExplainEnabled) {
       mapKey.innerHTML = `<span><i class="rank-up"></i>ours ranks higher</span><span><i class="rank-down"></i>past ranks higher</span><span><i class="allocation ours-only"></i>ours-only top 5%</span><span><i class="allocation past-only"></i>past-only top 5%</span><span><i class="truth"></i>first reports</span>`;
     } else {
       const allocationLabels = benchmarkComparisonEnabled
@@ -807,20 +988,31 @@ function renderBenchmarkLab() {
   const metric = selectedModel?.metrics?.[String(benchmarkYear)];
   const status = $('#benchmark-status');
   if (status && selectedModel && metric) {
-    if (benchmarkExplainEnabled) {
+    if (physicsViewEnabled) {
+      const profile = physicsProfiles[selectedModel.id];
+      status.innerHTML = `<b>Physics field view · ${benchmarkYear}</b>${selectedModel.name} · ${profile?.mechanism || 'model-derived relative-pressure surface'}<br><em>surface = frozen relative rank · arrows = local finite-difference gradient · animation is diagnostic, not elapsed time</em>`;
+    } else if (benchmarkExplainEnabled) {
       const summary = benchmarkExplanationSummary();
       status.innerHTML = `<b>Past literature → OURS · ${benchmarkYear}</b>Cook-2021 → OG-RDE (OURS · PRIMARY) · AP ${signedRank(summary.apDelta)} · top-5% hits ${summary.pastHits} → ${summary.oursHits}<br><em>${summary.reallocated} cells moved into our allocation · click any grid cell for its physics trace</em>`;
     } else {
       status.innerHTML = `<b>Frozen first-report replay · ${benchmarkYear}</b>${selectedModel.name} · AP ${metric.averagePrecision.toFixed(3)} · R@5% ${metric.recallAt5Pct.toFixed(3)}<br><em>${yearData.truthIndices.length} first-report cells · relative rank, not occupancy probability</em>`;
     }
   }
+  renderPhysicsHUD();
 }
 
 function selectBenchmarkModel(modelId) {
   if (!benchmarkModel(modelId)) return;
   benchmarkExplainEnabled = false;
+  if (physicsViewEnabled && !physicsModelIds.includes(modelId)) {
+    physicsViewEnabled = false;
+    physicsAnimationPlaying = false;
+    cancelAnimationFrame(physicsAnimationFrame);
+    map?.easeTo({ pitch: 0, bearing: 0, duration: 400 });
+  }
   selectedBenchmarkModelId = modelId;
   renderBenchmarkLab();
+  updatePhysicsMap();
   updateBenchmarkMap();
 }
 
@@ -829,12 +1021,17 @@ function setBenchmarkYear(year) {
   benchmarkYear = Number(year);
   selectedExplainCellIndex = null;
   renderBenchmarkLab();
+  updatePhysicsMap();
   updateBenchmarkMap();
 }
 
 function toggleBenchmarkExplanation(enabled = !benchmarkExplainEnabled) {
   benchmarkExplainEnabled = Boolean(enabled);
   if (benchmarkExplainEnabled) {
+    physicsViewEnabled = false;
+    physicsAnimationPlaying = false;
+    cancelAnimationFrame(physicsAnimationFrame);
+    map?.easeTo({ pitch: 0, bearing: 0, duration: 400 });
     selectedBenchmarkModelId = benchmarkExplainModels.ours;
     benchmarkComparisonEnabled = false;
     selectedExplainCellIndex = null;
@@ -917,6 +1114,8 @@ function addMapLayers() {
   map.addSource('lt-benchmark-allocation', { type: 'geojson', data: benchmarkAllocationData() });
   map.addSource('lt-benchmark-explanation', { type: 'geojson', data: benchmarkExplanationData() });
   map.addSource('lt-benchmark-truth', { type: 'geojson', data: benchmarkTruthData() });
+  map.addSource('lt-physics-surface', { type: 'geojson', data: physicsSurfaceData() });
+  map.addSource('lt-physics-vectors', { type: 'geojson', data: physicsVectorData() });
 
   map.addLayer({ id: 'lt-heatmap', type: 'heatmap', source: 'lt-reports', maxzoom: 6.5, filter: observationFilter, paint: {
     'heatmap-weight': ['interpolate', ['linear'], ['zoom'], 0, 0.5, 8, 1.4],
@@ -931,6 +1130,29 @@ function addMapLayers() {
     'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 2, 7, 6, 12, 10, 19],
     'heatmap-opacity': 0.42,
     'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(9, 41, 43, 0)', 0.12, 'rgba(20, 112, 102, .18)', 0.32, 'rgba(32, 169, 125, .34)', 0.58, 'rgba(81, 211, 148, .48)', 0.82, 'rgba(171, 237, 116, .58)', 1, 'rgba(210, 247, 151, .68)']
+  } });
+  map.addLayer({ id: 'lt-physics-field', type: 'fill', source: 'lt-physics-surface', layout: { visibility: 'none' }, paint: {
+    'fill-color': '#286a62', 'fill-opacity': .82
+  } });
+  map.addLayer({ id: 'lt-physics-height', type: 'fill-extrusion', source: 'lt-physics-surface', layout: { visibility: 'none' }, paint: {
+    'fill-extrusion-base': 0,
+    'fill-extrusion-height': ['interpolate', ['linear'], ['get', 'risk'], 0, 0, .2, 3500, .5, 18000, .75, 42000, 1, 76000],
+    'fill-extrusion-color': '#286a62',
+    'fill-extrusion-opacity': .78,
+    'fill-extrusion-vertical-gradient': true
+  } });
+  map.addLayer({ id: 'lt-physics-grid', type: 'line', source: 'lt-physics-surface', layout: { visibility: 'none' }, paint: {
+    'line-color': '#74d6ae', 'line-width': .38, 'line-opacity': .28
+  } });
+  map.addLayer({ id: 'lt-physics-front', type: 'line', source: 'lt-physics-surface', filter: ['==', ['get', 'index'], -1], layout: { visibility: 'none' }, paint: {
+    'line-color': '#f2ef83', 'line-width': ['interpolate', ['linear'], ['zoom'], 3, 1.2, 7, 2.6], 'line-opacity': .96, 'line-blur': .2
+  } });
+  map.addLayer({ id: 'lt-physics-vectors', type: 'symbol', source: 'lt-physics-vectors', layout: {
+    visibility: 'none', 'text-field': ['get', 'arrow'], 'text-size': ['interpolate', ['linear'], ['get', 'strength'], 0, 10, 1, 20],
+    'text-allow-overlap': true, 'text-ignore-placement': true
+  }, paint: {
+    'text-color': ['interpolate', ['linear'], ['get', 'risk'], 0, '#84c9b0', .65, '#d8f58e', 1, '#fff5a8'],
+    'text-halo-color': '#08231b', 'text-halo-width': 1.4, 'text-opacity': ['interpolate', ['linear'], ['get', 'strength'], 0, .3, 1, 1]
   } });
   map.addLayer({ id: 'lt-benchmark-risk-fill', type: 'fill', source: 'lt-benchmark-risk', layout: { visibility: 'none' }, paint: {
     'fill-color': ['interpolate', ['linear'], ['get', 'risk'], 0, 'rgba(4, 28, 22, 0)', .35, 'rgba(24, 112, 91, .12)', .7, 'rgba(73, 195, 139, .38)', 1, 'rgba(210, 247, 129, .72)'],
@@ -1486,6 +1708,14 @@ function downloadSnapshot() {
     selectedModel: benchmarkModel(),
     yearData: benchmarkYearData(),
     comparedModelIds: benchmarkComparisonEnabled ? benchmarkComparisonIds : [selectedBenchmarkModelId],
+    physicsView: physicsViewEnabled ? {
+      modelId: selectedBenchmarkModelId,
+      display: physicsDisplayMode,
+      sweepPhase: physicsPhase,
+      activeThreshold: physicsThreshold(),
+      vectorMeaning: 'Finite-difference gradient toward locally increasing frozen relative-rank score.',
+      interpretation: 'Diagnostic growth-style sweep over a frozen pressure surface; not abundance, calibrated velocity, or elapsed forecast time.'
+    } : null,
     explanation: explanationSummary ? {
       pastModelId: benchmarkExplainModels.past,
       oursModelId: benchmarkExplainModels.ours,
@@ -1570,8 +1800,15 @@ function setupInteractions() {
   $('#benchmark-mode')?.addEventListener('click', () => setLabMode('benchmark'));
   $('#scenario-mode')?.addEventListener('click', () => setLabMode('scenario'));
   $$('.benchmark-year button').forEach((button) => button.addEventListener('click', () => setBenchmarkYear(button.dataset.benchmarkYear)));
+  $('#physics-view-inline')?.addEventListener('click', () => togglePhysicsView());
   $('#explain-benchmark-inline')?.addEventListener('click', () => toggleBenchmarkExplanation());
   $('#compare-benchmark-inline')?.addEventListener('click', () => {
+    if (physicsViewEnabled) {
+      physicsViewEnabled = false;
+      physicsAnimationPlaying = false;
+      cancelAnimationFrame(physicsAnimationFrame);
+      map?.easeTo({ pitch: 0, bearing: 0, duration: 400 });
+    }
     if (benchmarkExplainEnabled) {
       benchmarkExplainEnabled = false;
       benchmarkComparisonEnabled = true;
@@ -1591,6 +1828,23 @@ function setupInteractions() {
   $('#benchmark-ranking')?.addEventListener('click', (event) => {
     const button = event.target.closest('[data-benchmark-model-id]');
     if (button) selectBenchmarkModel(button.dataset.benchmarkModelId);
+  });
+  $('#physics-model-options')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-physics-model]');
+    if (!button) return;
+    selectBenchmarkModel(button.dataset.physicsModel);
+    physicsAnimationLast = 0;
+    startPhysicsAnimation();
+  });
+  $('.physics-display-options')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-physics-display]');
+    if (button) setPhysicsDisplay(button.dataset.physicsDisplay);
+  });
+  $('#physics-play')?.addEventListener('click', () => {
+    physicsAnimationPlaying = !physicsAnimationPlaying;
+    physicsAnimationLast = 0;
+    renderPhysicsHUD();
+    startPhysicsAnimation();
   });
   $('#export-snapshot')?.addEventListener('click', downloadSnapshot);
   $('#place-search')?.addEventListener('input', (event) => searchPlace(event.target.value));
@@ -1615,7 +1869,7 @@ function setupInteractions() {
     setLabMode(next);
     $(`#${next}-mode`)?.focus();
   });
-  document.addEventListener('visibilitychange', startCorridorAnimation);
+  document.addEventListener('visibilitychange', () => { startCorridorAnimation(); startPhysicsAnimation(); });
   $('#model-ranking')?.addEventListener('click', (event) => {
     const button = event.target.closest('[data-model-id]');
     if (button) selectDiffusionModel(button.dataset.modelId);
