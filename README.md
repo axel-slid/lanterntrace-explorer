@@ -29,6 +29,8 @@ Build a browser-only copy (without Electron or development dependencies):
 npm run web:build -- ./dist-web
 ```
 
+Append `?embed=physics` to the browser build URL for a focused OG-RDE physics map without the desktop navigation, analysis sidebar, or timeline. The regular URL keeps the complete application.
+
 The clean checkout includes the frozen 2024–2025 benchmark, exploratory monthly display models, and checksum-locked occurrence-point snapshot used in the report. Tested development environment: macOS arm64, Node 25, npm 11, and Python 3.13. Node 22+ is recommended.
 
 For a full local model rebuild:

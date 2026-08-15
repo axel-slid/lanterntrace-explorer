@@ -5,6 +5,7 @@ const observationMetadata = observationBundle.metadata;
 const previewObservationPoints = observationPoints.filter((_, index) => index % 20 === 0);
 const modelBundle = window.LanternTraceModels || { metadata: {}, variants: [], topFive: [], models: {} };
 const benchmarkBundle = window.LanternTraceBenchmark || { metadata: {}, models: [], years: {} };
+const physicsEmbedMode = new URLSearchParams(window.location.search).get('embed') === 'physics';
 let selectedModelId = modelBundle.defaultModel || modelBundle.topFive?.[0] || null;
 let selectedBenchmarkModelId = benchmarkBundle.models.find((model) => model.id === 'og_rde')?.id || benchmarkBundle.models[0]?.id || null;
 let benchmarkYear = 2025;
@@ -1495,6 +1496,12 @@ function initMap() {
     updateSnapshot();
     renderBenchmarkLab();
     updateBenchmarkMap();
+    if (physicsEmbedMode) {
+      const grid = benchmarkBundle.metadata.grid;
+      map.fitBounds([[grid.west, grid.south], [grid.east, grid.north]], { padding: 22, duration: 0, maxZoom: 5.2 });
+      map.jumpTo({ pitch: 43, bearing: -8 });
+      startPhysicsAnimation();
+    }
     $('#map-state')?.classList.add('hidden');
   });
   map.on('error', () => {
@@ -1881,6 +1888,16 @@ function setupInteractions() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (physicsEmbedMode) {
+    document.documentElement.classList.add('physics-embed');
+    activeSection = 'methods';
+    activeLabMode = 'benchmark';
+    selectedBenchmarkModelId = 'og_rde';
+    benchmarkExplainEnabled = false;
+    benchmarkComparisonEnabled = false;
+    physicsViewEnabled = true;
+    physicsDisplayMode = 'height';
+  }
   const count = observationPoints.length.toLocaleString();
   const generated = observationMetadata.generatedAt ? new Date(observationMetadata.generatedAt).toLocaleDateString() : 'unavailable';
   const evidenceCount = $('#public-observation-count');

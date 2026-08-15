@@ -845,3 +845,39 @@ The reference site’s core system is clear: deep monochrome background, thin gr
 ## Codex
 
 The redesigned page now follows that site’s experience much more closely: fixed three-part header and slide-out navigation, a full-height 5/7 hero with the live LanternTrace map, condensed three-line title, animated route line, large evidence counters, lanternfly cutout, scrolling source band, editorial statement, four numbered model-story chapters, and a four-way exploration grid. All content and graphics are original to LanternTrace, and the accessibility labels/navigation state are wired correctly.
+
+## Codex
+
+Yes—I rebuilt the LanternTrace page around the [Protecting Blue Corridors](https://bluecorridors.org/) visual system.
+
+Live: [alex-dils.com/lanterntrace](https://alex-dils.com/lanterntrace/)
+
+It now has:
+
+- Full-height split hero with the live application
+- Condensed three-line title
+- Fixed header and slide-out navigation
+- Animated migration/frontier line
+- Large evidence counters
+- Floating lanternfly cutout
+- Scrolling data-source band
+- Four numbered explanatory chapters
+- Physics, benchmark, observation, and regional-change visuals
+- Blue Corridors-style exploration cards and footer
+- Responsive mobile layout and accessibility labels
+
+The production page, application, scripts, styles, imagery, and paper all return successfully. The development chat archive was also pushed to GitHub.
+
+## User
+
+[Image attachment omitted from the text export]
+
+change it to tracing lanternfly invasion. make the interactive thing just be this [Image #1] where the controls are on the left are off  its just the map then there will be a link to the full map
+
+## Codex
+
+I’ll turn the hero into a focused physics-map embed: rename it to “Tracing Lanternfly Invasion,” launch the OG-RDE 3D physics surface automatically, hide the full left analysis panel and general app chrome inside the embed, and keep a clear “Open full map” link for the complete interface. The standalone application will remain unchanged.
+
+## Codex
+
+The hero now says “Tracing Lanternfly Invasion.” Its iframe uses a dedicated physics-embed mode that starts directly on the OG-RDE raised surface, removes the top navigation, analysis sidebar, search/settings chrome, benchmark status, and timeline, while retaining the map and compact physics card shown in your reference. “Open full screen” still leads to the complete application.
