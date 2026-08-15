@@ -370,3 +370,478 @@ I’ll simplify the project page in exactly those three places: remove the glowi
 ## Codex
 
 The decorative hero graphic is gone—the real LanternTrace application now occupies the hero directly beneath the headline, with full-screen and paper links immediately above it. The requested caution block is completely removed, and the version label is now plain text with no dot. Local structure and asset checks pass; I’m publishing this revision now.
+
+## Codex
+
+Updated and deployed at [alex-dils.com/lanterntrace](https://alex-dils.com/lanterntrace/).
+
+- Removed the glowing dot.
+- Moved the live interactive app into the hero.
+- Removed the entire “What the map does not claim” section.
+- Confirmed both the page and embedded app return successfully in production.
+- Refreshed and pushed the Codex chat archive.
+
+## User
+
+do you see this website. i need you to copy it for the laternfly software 
+Explore map
+Home
+Explore
+Explore by Whale Species
+Navigate Threats & Risks
+Examine Priorities & Protections
+Dive Into Conservation & Solutions
+About
+Collaborators
+Solutions
+News & Stories
+Data Sources
+Contact
+©2026
+Protecting Blue Corridors Initiative and partners. See Site Terms and Privacy for more information.
+
+Protecting
+Blue
+Corridors
+two whales - a bigger and a smaller one - swimming side by side and simultaneously submerging with their tail fins above the water surface, birds eye view
+
+Discover More
+A Collaborative
+Approach to Whale
+Conservation
+0
+
+Years of Data
+
+0
+
+Satellite Tags
+
+0
+
+KM of Tracks Analyzed
+
+>0
+
+Collaborators
+
+whale flipwhale flip
+Blue Corridors: Lifelines for Whales and the Planet
+Whales and dolphins rely on critical ocean habitats – areas where they feed, mate, give birth, nurse young, socialize, and migrate – for their survival. These areas are connected by migratory pathways known as blue corridors, essential to their life cycle. Safe passage along these corridors is crucial for maintaining healthy populations and ensuring whales can thrive across entire ocean basins.
+
+
+
+Protecting Blue Corridors brings together 30 years of satellite tracking and scientific data to visualize key ocean habitats and migratory networks. This initiative supports global and regional conservation efforts, provides advice to mitigate threats, and highlights science-based solutions for policymakers. Strengthening ecological connectivity in our oceans benefits not only whales but marine biodiversity—and people—worldwide.
+
+
+Learn more
+We are a global collaboration of experts in marine mammal science, conservation, policy, and technology, working together to map whale movements, identify emerging threats, and co-design effective solutions. Protecting Blue Corridors is just the beginning of visualizing whale and dolphin movement across the globe, and there's still so much work to be done. By continuing to connect knowledge across disciplines and borders, we aim to build on this foundation together.
+
+please fill out the ALT attribute
+WWF (World Wildlife Fund)
+please fill out the ALT attribute
+Oregon St University & Center for Coastal Studies, USA
+please fill out the ALT attribute
+University of Southampton
+please fill out the ALT attribute
+University of California, Santa Cruz, USA
+please fill out the ALT attributes
+University of Washington & MarEcoTel USA
+please fill out the ALT attribute
+University of Azores, Portugal
+please fill out the ALT attribute
+Tethys Research Institute, Italy
+please fill out the ALT attribute
+GLOBICE Réunion
+please fill out the ALT attribute
+Whale Unit
+University of Auckland logo
+University of Auckland, New Zealand
+please fill out the ALT attribute
+Department of Fisheries and Oceans, Canada
+please fill out the ALT attribute
+Instituto de Conservación de Ballenas
+marecotel logo
+Marine Ecology & Telemetry Research
+please fill out the ALT attribute
+University of Hamburg, Germany
+please fill out the ALT attribute
+UiT: The Arctic University of Norway
+please fill out the ALT attribute
+Norweigan Polar Institute
+please fill out the ALT attribute
+University of St Andrews
+please fill out the ALT attribute
+Wildlife Conservation Society
+University of Western Australia logo
+The University of Western Australia
+Macquarie University logo
+Macquarie University, Australia
+please fill out the ALT attribute
+Tohora Voyages
+please fill out the ALT attribute
+African Aquatic Conservation Fund
+please fill out the ALT attribute
+Cetamada
+please fill out the ALT attribute
+Karen C. Drayer Wildlife Health Center at UC Davis
+please fill out the ALT attribute
+NeuroPSI (Paris-Saclay Institute of Neuroscience)
+please fill out the ALT attribute
+Environment Society of Oman
+please fill out the ALT attribute
+Future Seas Global SEC
+please fill out the ALT attribute
+Balena
+please fill out the ALT attribute
+Conicet
+please fill out the ALT attribute
+Comahue, Argentina
+please fill out the ALT attribute
+Instituto Aqualie
+please fill out the ALT attribute
+Fisheries RSA
+Duke University
+Duke University, USA
+please fill out the ALT attribute
+MEGAPTERA, France
+please fill out the ALT attribute
+Greenland Institute of Natural Resources
+please fill out the ALT attribute
+Institut des Neurosciences Paris-Saclay, Université Paris-Saclay, France
+fundacion macuaticos colombia
+Fundación Macuáticos, Colombia
+French National Research Institute for Sustainable Development (IRD), New Caledonia
+French National Research Institute for Sustainable Development (IRD), New Caledonia
+Operation Cetaces
+Operation Cetaces, New Caledonia
+Universidad Valparaíso, Chile
+Universidad Valparaíso, Chile
+Mingan Island Cetacean Study
+Mingan Island Cetacean Study
+please fill out the ALT attribute
+IUCN SSC-WCPA Marine Mammal Protected Areas Task Force
+please fill out the ALT attribute
+Key Biodiversity Areas
+please fill out the ALT attribute
+AEIP
+please fill out the ALT attribute
+ODE
+This is the future of conservation—open, collaborative, and grounded in science. By linking threats with solutions, this platform supports smarter, more coordinated marine planning that spans sectors and borders.
+
+Dr Ryan Reisinger
+
+University of Southampton (UK)
+
+01.
+Protecting Whales Has Benefits for Nature and People
+Healthy whale populations benefit both nature and people. Growing scientific evidence shows they have a key role in ocean productivity and carbon sequestration. Along their migration routes, whales fertilize ecosystems, boosting phytoplankton production. Economically, whales fuel a thriving global whale-watching industry and benefit marine biodiversity. Culturally, they hold deep significance for many Indigenous and coastal Communities
+
+please fill out the ALT attribute
+© Darren Jew
+
+02.
+Threats to Whales Have Evolved Impacting Population Recovery
+In countless areas around the globe, cetaceans are under threat from human activities. An estimated 300,000 cetaceans are killed each year as a result of fisheries bycatch, while populations are impacted from increasing ship traffic, underwater noise, pollution and loss of important habitats including as a result of climate change. These threats often occur in concert and overlap with whales’ critical habitats and migration routes, creating a hazardous and at times fatal obstacle course to navigate.
+
+please fill out the ALT attribute
+© naturepl.com / Michael Wu / WWF
+
+03.
+Our Conservation Approach Must Evolve Too
+Seven of the world’s 14 great whale species remain classified as Endangered or Vulnerable despite decades of protection following the commercial whaling moratorium. To reverse this trend, conservation must go further: connecting science, policy, and management across ocean basins. Only through bold, collaborative action can we ensure whales have safe passage across their entire range.
+
+please fill out the ALT attribute
+© sbedaux / Shutterstock
+
+04.
+Science-Based Solutions Can Make a Difference
+Protecting whale migration corridors requires a holistic approach from global to local scales. Networks of marine protected areas, sustainable ocean planning, innovative fishing technologies, and ambitious policies all contribute to effective conservation. We must view the ocean as one interconnected system, requiring collaboration among local communities, scientists, governments, civil society, and international bodies like the International Whaling Commission, International Maritime Organization, and countries implementing the UN High Seas Treaty. With only 8% of the ocean currently protected, achieving the 30x30 goal—conserving 30% by 2030—is vital for securing the future of whales and overall ocean health.
+
+please fill out the ALT attribute
+© Duke University Marine Robotics and Remote Sensing, taken under NOAA permit.
+
+Map Their Journeys, Protect Their Future
+Explore map
+View
+more
+Explore by Whale Species
+View satellite tracks, migration corridors and range maps for nine critical whale species.
+
+View
+more
+Navigate Threats & Risks
+View human activities impacting whales within their critical habitats and along their migration corridors.
+
+View
+more
+Examine Priorities & Protections
+Overlay marine conservation priorities and current protected areas for informed decision making.
+
+View
+more
+Dive into Conservation
+Examine emerging blue corridors, the challenges they face, and opportunities for conservation solutions.
+
+Latest News
+Bringing whale superhighways to life - a new digital platform a game-changer for ocean conservation
+A coalition of leading scientists, civil society, governments, tech innovators and WWF have launched BlueCorridors.org
+
+©Darren Jew
+Diminishing sea ice threatens delicate Antarctic ecosystem and raises alarms
+Surrounded by the Southern Ocean lies the continent of Antarctica. This part of the world consists of ice, penguins, seals, and migrating whales. This continent, where few ever travel, is a desert with two seasons summer and winter.
+
+please fill out the ALT attribute
+For the first time, researchers track the full migration cycle of an Australian southern right whale
+Migration is a tricky endeavour. There are numerous obstacles, not to mention many kilometres to travel. When you think of migration, you may think of birds first.
+
+Augusta SRW subadult encounter
+Stay Connected
+Sign up for our newsletter to receive the latest updates on the Protecting Blue Corridors research, whale migration, conservation efforts, and engagement opportunities
+
+recaptcha token
+Enter email addres
+
+Sign up
+a cut out photograph of a whales head facing upwards at a slight angle, giving away an impression that it jumps out of the bottom of the screen
+©2026 Protecting Blue Corridors Initiative and partners. See Site Terms and Privacy for more information.
+
+Site Terms & Privacy Policy
+Contact Us
+
+Explore map
+Home
+Explore
+Explore by Whale Species
+Navigate Threats & Risks
+Examine Priorities & Protections
+Dive Into Conservation & Solutions
+About
+Collaborators
+Solutions
+News & Stories
+Data Sources
+Contact
+©2026
+Protecting Blue Corridors Initiative and partners. See Site Terms and Privacy for more information.
+
+Protecting
+Blue
+Corridors
+two whales - a bigger and a smaller one - swimming side by side and simultaneously submerging with their tail fins above the water surface, birds eye view
+
+Discover More
+A Collaborative
+Approach to Whale
+Conservation
+0
+
+Years of Data
+
+0
+
+Satellite Tags
+
+0
+
+KM of Tracks Analyzed
+
+>0
+
+Collaborators
+
+whale flipwhale flip
+Blue Corridors: Lifelines for Whales and the Planet
+Whales and dolphins rely on critical ocean habitats – areas where they feed, mate, give birth, nurse young, socialize, and migrate – for their survival. These areas are connected by migratory pathways known as blue corridors, essential to their life cycle. Safe passage along these corridors is crucial for maintaining healthy populations and ensuring whales can thrive across entire ocean basins.
+
+
+
+Protecting Blue Corridors brings together 30 years of satellite tracking and scientific data to visualize key ocean habitats and migratory networks. This initiative supports global and regional conservation efforts, provides advice to mitigate threats, and highlights science-based solutions for policymakers. Strengthening ecological connectivity in our oceans benefits not only whales but marine biodiversity—and people—worldwide.
+
+
+Learn more
+We are a global collaboration of experts in marine mammal science, conservation, policy, and technology, working together to map whale movements, identify emerging threats, and co-design effective solutions. Protecting Blue Corridors is just the beginning of visualizing whale and dolphin movement across the globe, and there's still so much work to be done. By continuing to connect knowledge across disciplines and borders, we aim to build on this foundation together.
+
+please fill out the ALT attribute
+WWF (World Wildlife Fund)
+please fill out the ALT attribute
+Oregon St University & Center for Coastal Studies, USA
+please fill out the ALT attribute
+University of Southampton
+please fill out the ALT attribute
+University of California, Santa Cruz, USA
+please fill out the ALT attributes
+University of Washington & MarEcoTel USA
+please fill out the ALT attribute
+University of Azores, Portugal
+please fill out the ALT attribute
+Tethys Research Institute, Italy
+please fill out the ALT attribute
+GLOBICE Réunion
+please fill out the ALT attribute
+Whale Unit
+University of Auckland logo
+University of Auckland, New Zealand
+please fill out the ALT attribute
+Department of Fisheries and Oceans, Canada
+please fill out the ALT attribute
+Instituto de Conservación de Ballenas
+marecotel logo
+Marine Ecology & Telemetry Research
+please fill out the ALT attribute
+University of Hamburg, Germany
+please fill out the ALT attribute
+UiT: The Arctic University of Norway
+please fill out the ALT attribute
+Norweigan Polar Institute
+please fill out the ALT attribute
+University of St Andrews
+please fill out the ALT attribute
+Wildlife Conservation Society
+University of Western Australia logo
+The University of Western Australia
+Macquarie University logo
+Macquarie University, Australia
+please fill out the ALT attribute
+Tohora Voyages
+please fill out the ALT attribute
+African Aquatic Conservation Fund
+please fill out the ALT attribute
+Cetamada
+please fill out the ALT attribute
+Karen C. Drayer Wildlife Health Center at UC Davis
+please fill out the ALT attribute
+NeuroPSI (Paris-Saclay Institute of Neuroscience)
+please fill out the ALT attribute
+Environment Society of Oman
+please fill out the ALT attribute
+Future Seas Global SEC
+please fill out the ALT attribute
+Balena
+please fill out the ALT attribute
+Conicet
+please fill out the ALT attribute
+Comahue, Argentina
+please fill out the ALT attribute
+Instituto Aqualie
+please fill out the ALT attribute
+Fisheries RSA
+Duke University
+Duke University, USA
+please fill out the ALT attribute
+MEGAPTERA, France
+please fill out the ALT attribute
+Greenland Institute of Natural Resources
+please fill out the ALT attribute
+Institut des Neurosciences Paris-Saclay, Université Paris-Saclay, France
+fundacion macuaticos colombia
+Fundación Macuáticos, Colombia
+French National Research Institute for Sustainable Development (IRD), New Caledonia
+French National Research Institute for Sustainable Development (IRD), New Caledonia
+Operation Cetaces
+Operation Cetaces, New Caledonia
+Universidad Valparaíso, Chile
+Universidad Valparaíso, Chile
+Mingan Island Cetacean Study
+Mingan Island Cetacean Study
+please fill out the ALT attribute
+IUCN SSC-WCPA Marine Mammal Protected Areas Task Force
+please fill out the ALT attribute
+Key Biodiversity Areas
+please fill out the ALT attribute
+AEIP
+please fill out the ALT attribute
+ODE
+This is the future of conservation—open, collaborative, and grounded in science. By linking threats with solutions, this platform supports smarter, more coordinated marine planning that spans sectors and borders.
+
+Dr Ryan Reisinger
+
+University of Southampton (UK)
+
+01.
+Protecting Whales Has Benefits for Nature and People
+Healthy whale populations benefit both nature and people. Growing scientific evidence shows they have a key role in ocean productivity and carbon sequestration. Along their migration routes, whales fertilize ecosystems, boosting phytoplankton production. Economically, whales fuel a thriving global whale-watching industry and benefit marine biodiversity. Culturally, they hold deep significance for many Indigenous and coastal Communities
+
+please fill out the ALT attribute
+© Darren Jew
+
+02.
+Threats to Whales Have Evolved Impacting Population Recovery
+In countless areas around the globe, cetaceans are under threat from human activities. An estimated 300,000 cetaceans are killed each year as a result of fisheries bycatch, while populations are impacted from increasing ship traffic, underwater noise, pollution and loss of important habitats including as a result of climate change. These threats often occur in concert and overlap with whales’ critical habitats and migration routes, creating a hazardous and at times fatal obstacle course to navigate.
+
+please fill out the ALT attribute
+© naturepl.com / Michael Wu / WWF
+
+03.
+Our Conservation Approach Must Evolve Too
+Seven of the world’s 14 great whale species remain classified as Endangered or Vulnerable despite decades of protection following the commercial whaling moratorium. To reverse this trend, conservation must go further: connecting science, policy, and management across ocean basins. Only through bold, collaborative action can we ensure whales have safe passage across their entire range.
+
+please fill out the ALT attribute
+© sbedaux / Shutterstock
+
+04.
+Science-Based Solutions Can Make a Difference
+Protecting whale migration corridors requires a holistic approach from global to local scales. Networks of marine protected areas, sustainable ocean planning, innovative fishing technologies, and ambitious policies all contribute to effective conservation. We must view the ocean as one interconnected system, requiring collaboration among local communities, scientists, governments, civil society, and international bodies like the International Whaling Commission, International Maritime Organization, and countries implementing the UN High Seas Treaty. With only 8% of the ocean currently protected, achieving the 30x30 goal—conserving 30% by 2030—is vital for securing the future of whales and overall ocean health.
+
+please fill out the ALT attribute
+© Duke University Marine Robotics and Remote Sensing, taken under NOAA permit.
+
+Map Their Journeys, Protect Their Future
+Explore map
+View
+more
+Explore by Whale Species
+View satellite tracks, migration corridors and range maps for nine critical whale species.
+
+View
+more
+Navigate Threats & Risks
+View human activities impacting whales within their critical habitats and along their migration corridors.
+
+View
+more
+Examine Priorities & Protections
+Overlay marine conservation priorities and current protected areas for informed decision making.
+
+View
+more
+Dive into Conservation
+Examine emerging blue corridors, the challenges they face, and opportunities for conservation solutions.
+
+Latest News
+Bringing whale superhighways to life - a new digital platform a game-changer for ocean conservation
+A coalition of leading scientists, civil society, governments, tech innovators and WWF have launched BlueCorridors.org
+
+©Darren Jew
+Diminishing sea ice threatens delicate Antarctic ecosystem and raises alarms
+Surrounded by the Southern Ocean lies the continent of Antarctica. This part of the world consists of ice, penguins, seals, and migrating whales. This continent, where few ever travel, is a desert with two seasons summer and winter.
+
+please fill out the ALT attribute
+For the first time, researchers track the full migration cycle of an Australian southern right whale
+Migration is a tricky endeavour. There are numerous obstacles, not to mention many kilometres to travel. When you think of migration, you may think of birds first.
+
+Augusta SRW subadult encounter
+Stay Connected
+Sign up for our newsletter to receive the latest updates on the Protecting Blue Corridors research, whale migration, conservation efforts, and engagement opportunities
+
+recaptcha token
+Enter email addres
+
+Sign up
+a cut out photograph of a whales head facing upwards at a slight angle, giving away an impression that it jumps out of the bottom of the screen
+©2026 Protecting Blue Corridors Initiative and partners. See Site Terms and Privacy for more information.
+
+Site Terms & Privacy Policy
+Contact Us
+
+## Codex
+
+I recognize this as the Protecting Blue Corridors site. I’ll study the live site’s layout and interaction language, then rebuild the LanternTrace project page around the same editorial structure—full-bleed conservation hero, oversized typography, data counters, narrative panels, and an “Explore map” transition—using LanternTrace’s own content and imagery rather than copying their protected whale assets or branding. The real LanternTrace application will remain the central interactive experience.
+
+## Codex
+
+The reference site’s core system is clear: deep monochrome background, thin grid borders, a condensed three-line hero, a 7/5 editorial split, oversized numeric counters, a cutout animal crossing section boundaries, numbered story chapters, and a persistent “Explore map” call to action. I’m translating that system to LanternTrace with the live model lab as the hero visual, the spotted lanternfly cutout in place of the whale, and the project’s real benchmark/data story throughout.
+
+## Codex
+
+The redesigned page now follows that site’s experience much more closely: fixed three-part header and slide-out navigation, a full-height 5/7 hero with the live LanternTrace map, condensed three-line title, animated route line, large evidence counters, lanternfly cutout, scrolling source band, editorial statement, four numbered model-story chapters, and a four-way exploration grid. All content and graphics are original to LanternTrace, and the accessibility labels/navigation state are wired correctly.
