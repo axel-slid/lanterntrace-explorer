@@ -938,3 +938,35 @@ Got it—I was solving the wrong problem. You want that focused physics view use
 ## Codex
 
 I’ve removed the fragile hero iframe entirely. The hero now uses the exact physics-map image you sent as a lightweight, immediate preview; clicking anywhere on it—or “Open full screen”—opens the complete LanternTrace app. There is no embedded app initialization left to fail on the landing page.
+
+## Codex
+
+Fixed. I removed the embedded iframe entirely.
+
+The hero now displays the exact physics-map image you provided. Clicking the image or “Open full screen” opens the complete application.
+
+[Open the corrected page](https://www.alex-dils.com/lanterntrace/?v=static-preview)
+
+I verified the new page and image are both live with `200` responses.
+
+## User
+
+[Image attachment omitted from the text export]
+
+it still looks like this for me [Image #1]
+
+## Codex
+
+The screenshot exposes the exact bug: the page is loading, but every relative asset is resolving from the domain root because the URL has no trailing slash. That means the LanternTrace stylesheet and preview image never load, leaving raw HTML and the unstyled SVG path. I’m fixing the page’s base URL so both `/lanterntrace` and `/lanterntrace/` resolve assets identically.
+
+## Codex
+
+The asset-base fix is in place. I’m validating the routing config now, then I’ll deploy it and test the exact no-slash URL from your screenshot—not just the working trailing-slash variant.
+
+## Codex
+
+The production deployment succeeded. I’m checking the live redirect chain plus the CSS, map image, and JavaScript response types now; those are the four things that were broken in the screenshot.
+
+## Codex
+
+The live checks now pass: `/lanterntrace` redirects correctly, and the page, stylesheet, map preview, and script all return `200` with the right content types. I’m recording this fix in the project’s Codex-chat archive and pushing only that archive update, while leaving the unrelated paper files untouched.
