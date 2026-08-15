@@ -5,8 +5,8 @@ type: software
 authors:
   - family-names: "Dils"
     given-names: "Alex Arthur"
-version: 0.3.0
-date-released: 2026-08-10
+version: 0.3.1
+date-released: 2026-08-15
 repository-code: "https://github.com/axel-slid/lanterntrace-explorer"
 url: "https://github.com/axel-slid/lanterntrace-explorer"
 abstract: "An interactive spotted-lanternfly explorer and reproducible benchmark contrasting cumulative-map scoring with frozen first-report replay."

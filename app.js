@@ -23,6 +23,16 @@ const benchmarkColors = {
   covariate_hazard: '#73c9d5', og_rde: '#78efb5', transport_rd: '#f2c96d', climate_rd: '#73b9ff',
   fisher_kpp: '#a8d98b', full_mechanistic: '#d79b70', cook_2021_kernel: '#b18be3', distance_kernel: '#9ca8a2'
 };
+const benchmarkOwnership = {
+  covariate_hazard: { label: 'OURS · CONTROL', className: 'ours', detail: 'study-built no-physics control' },
+  og_rde: { label: 'OURS · PRIMARY', className: 'ours primary', detail: 'primary observation-guided model' },
+  transport_rd: { label: 'OURS · PHYSICS', className: 'ours', detail: 'study-built mechanistic variant' },
+  climate_rd: { label: 'OURS · PHYSICS', className: 'ours', detail: 'study-built mechanistic variant' },
+  full_mechanistic: { label: 'OURS · PHYSICS', className: 'ours', detail: 'study-built mechanistic variant' },
+  fisher_kpp: { label: 'CLASSIC BASELINE', className: 'baseline', detail: 'classical reaction-diffusion baseline' },
+  cook_2021_kernel: { label: 'PAST LITERATURE', className: 'literature', detail: 'transferred Cook et al. 2021 comparator' },
+  distance_kernel: { label: 'SIMPLE BASELINE', className: 'baseline', detail: 'distance-only baseline' }
+};
 const benchmarkComparisonIds = ['covariate_hazard', 'og_rde', 'transport_rd', 'cook_2021_kernel'];
 const benchmarkExplainModels = { past: 'cook_2021_kernel', ours: 'og_rde', diffusion: 'fisher_kpp', climate: 'climate_rd' };
 const benchmarkExplainRegions = [
@@ -599,8 +609,8 @@ function physicsTraceMarkup(record) {
   const stages = [
     { label: 'Past literature proximity', model: 'Cook-2021', score: record.past, delta: null },
     { label: 'Local diffusion wave', model: 'Fisher–KPP', score: record.diffusion, delta: record.diffusionDelta },
-    { label: 'Climate-modified wave', model: 'Climate RD', score: record.climate, delta: record.climateDelta },
-    { label: 'Observation-guided fusion', model: 'OG-RDE (ours)', score: record.ours, delta: record.fusionDelta }
+    { label: 'Climate-modified wave · study physics variant', model: 'Climate RD · OURS', score: record.climate, delta: record.climateDelta },
+    { label: 'Observation-guided fusion · primary model', model: 'OG-RDE · OURS', score: record.ours, delta: record.fusionDelta }
   ];
   const contrasts = [
     { key: 'local diffusion', value: record.diffusionDelta },
@@ -638,7 +648,7 @@ function renderBenchmarkExplanation() {
   container.innerHTML = `<div class="result-comparison-head">
       <span><i class="past"></i><small>PAST LITERATURE</small><b>Cook-2021</b></span>
       <strong>→</strong>
-      <span><i class="ours"></i><small>OURS</small><b>OG-RDE</b></span>
+      <span><i class="ours"></i><small>OURS · PRIMARY MODEL</small><b>OG-RDE</b></span>
     </div>
     <div class="result-kpis">
       <span><small>AP CHANGE</small><b>+${summary.apDelta.toFixed(3)}</b></span>
@@ -746,9 +756,10 @@ function renderBenchmarkLab() {
   );
   ranking.innerHTML = ordered.map((model, index) => {
     const metric = model.metrics[String(benchmarkYear)];
+    const ownership = benchmarkOwnership[model.id] || { label: 'COMPARATOR', className: 'baseline' };
     return `<button class="model-choice ${model.id === selectedBenchmarkModelId ? 'active' : ''}" data-benchmark-model-id="${model.id}" style="--active-model:${benchmarkColors[model.id] || '#78efb5'}" aria-pressed="${model.id === selectedBenchmarkModelId}">
       <span class="model-rank">#${index + 1}</span>
-      <span class="model-name"><b>${model.name}</b><small>AP ${metric.averagePrecision.toFixed(3)} · R@5% ${metric.recallAt5Pct.toFixed(3)}</small></span>
+      <span class="model-name"><b>${model.name}</b><em class="model-owner ${ownership.className}">${ownership.label}</em><small>AP ${metric.averagePrecision.toFixed(3)} · R@5% ${metric.recallAt5Pct.toFixed(3)}</small></span>
       <span class="model-score"><strong>${metric.averagePrecision.toFixed(3)}</strong><small>AP</small></span>
     </button>`;
   }).join('');
@@ -759,9 +770,10 @@ function renderBenchmarkLab() {
     const comparison = difference
       ? `${difference.mean >= 0 ? '+' : ''}${difference.mean.toFixed(3)} vs OG-RDE within blocks (${difference.interval[0].toFixed(3)} to ${difference.interval[1].toFixed(3)})`
       : 'Reference model for paired within-block differences';
-    detail.innerHTML = `<div class="model-detail-head"><span>SELECTED FROZEN MODEL</span><b>${benchmarkYear}</b></div>
+    const ownership = benchmarkOwnership[selected.id] || { label: 'COMPARATOR', detail: 'benchmark comparator' };
+    detail.innerHTML = `<div class="model-detail-head"><span>SELECTED · ${ownership.label}</span><b>${benchmarkYear}</b></div>
       <h3>${selected.name}</h3>
-      <p>Relative first-report risk rank · coefficients and specification unchanged after 2023. ${comparison}.</p>
+      <p>${ownership.detail}. Relative first-report risk rank · coefficients and specification unchanged after 2023. ${comparison}.</p>
       <div class="benchmark-stat-grid">
         <span><b>${metric.averagePrecision.toFixed(3)}</b>annual AP</span>
         <span><b>${metric.recallAt5Pct.toFixed(3)}</b>R@5%</span>
@@ -797,7 +809,7 @@ function renderBenchmarkLab() {
   if (status && selectedModel && metric) {
     if (benchmarkExplainEnabled) {
       const summary = benchmarkExplanationSummary();
-      status.innerHTML = `<b>Past literature → ours · ${benchmarkYear}</b>Cook-2021 → OG-RDE · AP ${signedRank(summary.apDelta)} · top-5% hits ${summary.pastHits} → ${summary.oursHits}<br><em>${summary.reallocated} cells moved into our allocation · click any grid cell for its physics trace</em>`;
+      status.innerHTML = `<b>Past literature → OURS · ${benchmarkYear}</b>Cook-2021 → OG-RDE (OURS · PRIMARY) · AP ${signedRank(summary.apDelta)} · top-5% hits ${summary.pastHits} → ${summary.oursHits}<br><em>${summary.reallocated} cells moved into our allocation · click any grid cell for its physics trace</em>`;
     } else {
       status.innerHTML = `<b>Frozen first-report replay · ${benchmarkYear}</b>${selectedModel.name} · AP ${metric.averagePrecision.toFixed(3)} · R@5% ${metric.recallAt5Pct.toFixed(3)}<br><em>${yearData.truthIndices.length} first-report cells · relative rank, not occupancy probability</em>`;
     }

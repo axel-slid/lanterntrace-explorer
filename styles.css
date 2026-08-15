@@ -560,12 +560,17 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
 .benchmark-year { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 7px; }
 .benchmark-year button { min-height: 30px; border: 1px solid rgba(121, 240, 196, .16); border-radius: 6px; background: rgba(3, 34, 26, .45); color: #82ad99; font: 600 10px 'DM Mono', monospace; }
 .benchmark-year button.active { border-color: rgba(193, 245, 119, .62); background: rgba(137, 195, 90, .14); color: #e2ffae; }
-.benchmark-ranking .model-choice { grid-template-columns: 18px minmax(0, 1fr) 62px; min-height: 48px; padding: 7px 6px; }
+.benchmark-ranking .model-choice { grid-template-columns: 18px minmax(0, 1fr) 62px; min-height: 58px; padding: 7px 6px; }
 .benchmark-ranking .model-rank { font-size: 9px; }
 .benchmark-ranking .model-name b { font-size: 12px; }
 .benchmark-ranking .model-name small { font-size: 9px; line-height: 1.25; }
 .benchmark-ranking .model-score strong { font-size: 12px; }
 .benchmark-ranking .model-score small { color: #84a996; font: 8px 'DM Mono', monospace; }
+.benchmark-ranking .model-owner { display: table; margin: 3px 0 2px; padding: 2px 4px; border: 1px solid rgba(142, 177, 162, .2); border-radius: 3px; color: #8fa99e; font: 700 8px 'DM Mono', monospace; font-style: normal; letter-spacing: .04em; }
+.benchmark-ranking .model-owner.ours { border-color: rgba(89, 232, 177, .4); background: rgba(69, 189, 142, .1); color: #82f1c4; }
+.benchmark-ranking .model-owner.ours.primary { border-color: rgba(190, 245, 111, .58); background: rgba(153, 211, 86, .12); color: #dcff9b; }
+.benchmark-ranking .model-owner.literature { border-color: rgba(195, 137, 229, .4); background: rgba(156, 100, 190, .1); color: #d8a8ee; }
+.benchmark-ranking .model-owner.baseline { color: #8ba398; }
 #benchmark-detail p { color: #91b6a5; font-size: 9px; line-height: 1.45; }
 #benchmark-detail .benchmark-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 8px; }
 #benchmark-detail .benchmark-stat-grid span { display: flex; min-height: 45px; flex-direction: column; justify-content: center; padding: 5px; border: 1px solid rgba(121, 240, 196, .13); border-radius: 6px; color: #789f8e; font: 8px/1.2 'DM Mono', monospace; }

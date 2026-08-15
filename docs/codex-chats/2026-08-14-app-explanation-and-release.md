@@ -204,3 +204,55 @@ The visual QA shows the regional difference map is working: green cells are prio
 ## Codex
 
 The final verification now checks the exact published numbers: 2024 changes from 31→36 captured reports with 15 cells reallocated; 2025 changes from 26→33 with 20 reallocated. The newly signed package also passed its runtime allowlist and embedded-paper checks.
+
+## Codex
+
+The explainability view is now committed and pushed as `v0.3.0`. I’m replacing the public “latest download” with this verified build, so the existing one-click link will automatically serve the new visualization.
+
+## Codex
+
+Implemented and published in LanternTrace Explorer v0.3.0.
+
+The new results view includes:
+
+- Cook-2021 literature baseline → OG-RDE comparison.
+- Green/purple cell-level ranking changes.
+- Outlines showing cells entering or leaving the top-5% allocation.
+- Regional summaries for Appalachia, Northeast, Mid-Atlantic, and Great Lakes.
+- Clickable regions and individual grid cells.
+- A Cook-2021 → Fisher-KPP → Climate RD → OG-RDE physics trace.
+- 2024 and 2025 result switching.
+- Explanation data included in JSON exports.
+
+The app clearly labels these as diagnostic model-rank contrasts—not causal or SHAP explanations.
+
+Verified displayed results:
+
+- 2024: 31 → 36 captured reports; 15 cells reallocated.
+- 2025: 26 → 33 captured reports; 20 cells reallocated; AP +0.057.
+
+[Download LanternTrace Explorer v0.3.0](https://github.com/axel-slid/lanterntrace-explorer/releases/latest/download/LanternTrace-Explorer-macOS-Apple-Silicon.zip)
+
+[View the GitHub release](https://github.com/axel-slid/lanterntrace-explorer/releases/tag/v0.3.0)
+
+The packaged app is currently open on the new visualization.
+
+## User
+
+clealy label the ones that are  ours
+
+## Codex
+
+I’ll make ownership unmistakable everywhere the models appear—ranking rows, comparison header, map status, trace, and legend—while keeping Cook‑2021 explicitly marked as the literature baseline. I’m checking the paper’s terminology first so I don’t incorrectly claim baseline or ablation models as the proposed method.
+
+## Codex
+
+The ownership scheme is now in the interface: OG‑RDE is “OURS · PRIMARY,” the study-built variants and control are labeled “OURS,” and Cook‑2021/Fisher‑KPP/distance remain explicitly marked as external or baseline models. I’m finishing the release checks and visual QA now.
+
+## Codex
+
+The checks pass, and the labels distinguish provenance without implying that “ours” automatically means better. I’ve also kept OG‑RDE uniquely marked as the primary proposed model; the other study models are identified by their actual roles (control or physics variant). Next I’m rebuilding the signed app and checking the rendered badges in the packaged UI.
+
+## Codex
+
+The packaged v0.3.1 UI now renders the ownership chips correctly in the actual app—not just in source: “OURS · PRIMARY,” “OURS · CONTROL,” “OURS · PHYSICS,” “PAST LITERATURE,” and baseline labels are all visible and accessible. I’m preparing the downloadable release and refreshing the repository’s sanitized Codex-chat archive.

@@ -1,6 +1,6 @@
 {
   "name": "lanterntrace-explorer",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Electron prototype for exploring spotted lanternfly invasion-front evidence.",
   "author": "LanternTrace Explorer contributors",
   "main": "main.js",
