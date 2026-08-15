@@ -11,6 +11,7 @@
     "data:gbif": "node scripts/fetch-gbif-observations.mjs",
     "model:build": "python3 scripts/build-diffusion-model.py",
     "model:test": "python3 scripts/build-diffusion-model.py --verify",
+    "web:build": "node scripts/build-web.cjs",
     "pack": "npm run verify:release && electron-builder --dir && npm run verify:package",
     "verify:explanation": "node scripts/verify-explanation.cjs",
     "verify:physics": "node scripts/verify-physics-view.cjs",

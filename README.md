@@ -10,6 +10,8 @@ Unzip it, then drag **LanternTrace Explorer** into Applications. The app is deve
 
 [View all releases](https://github.com/axel-slid/lanterntrace-explorer/releases) · [Read the Codex development chats](docs/codex-chats/README.md)
 
+**[Use the interactive web lab](https://alex-dils.com/lanterntrace/)**
+
 **[Read the technical paper](output/pdf/lanterntrace-frontier-forecasting.pdf)**
 
 ![LanternTrace Explorer frozen first-report evaluation](docs/screenshot.png)
@@ -19,6 +21,12 @@ Unzip it, then drag **LanternTrace Explorer** into Applications. The app is deve
 ```bash
 npm ci
 npm start
+```
+
+Build a browser-only copy (without Electron or development dependencies):
+
+```bash
+npm run web:build -- ./dist-web
 ```
 
 The clean checkout includes the frozen 2024–2025 benchmark, exploratory monthly display models, and checksum-locked occurrence-point snapshot used in the report. Tested development environment: macOS arm64, Node 25, npm 11, and Python 3.13. Node 22+ is recommended.

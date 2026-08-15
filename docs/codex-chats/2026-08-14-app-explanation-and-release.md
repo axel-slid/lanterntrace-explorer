@@ -295,3 +295,51 @@ The feature is now wired to the exact frozen model fields: the raised/flat surfa
 ## Codex
 
 The automated checks pass for all five physics surfaces and both frozen years. I’m using the computer-control skill now to open the Electron build and inspect the real MapLibre rendering—especially the 3D extrusion, vector legibility, controls, and any runtime errors that static checks cannot catch.
+
+## Codex
+
+The live UI test is clean: the toggle opens a properly positioned control panel, the 3D terrain-like pressure surface and 2D field both render, gradient arrows remain readable, each model swaps in its own mechanism/field, and pause/play works. I’m packaging this as v0.4.0 and then I’ll replace the GitHub “latest” download.
+
+## Codex
+
+Done—Physics Field View is live in v0.4.0.
+
+Open **Diffusion Models → Physics field view**. You can:
+
+- Animate a growth-style sweep across the frozen model surface.
+- Switch between raised **3D Surface** and flat **2D Field**.
+- Compare Fisher‑KPP, Climate RD, Transport RD, Full mechanistic, and OG‑RDE.
+- Inspect arrows pointing toward locally increasing model pressure.
+- Pause or resume the animation.
+
+The arrows represent score gradients, not measured insect velocity; the animation is diagnostic rather than literal elapsed-time growth.
+
+[Download LanternTrace Explorer v0.4.0](https://github.com/axel-slid/lanterntrace-explorer/releases/latest/download/LanternTrace-Explorer-macOS-Apple-Silicon.zip)
+
+[View the release](https://github.com/axel-slid/lanterntrace-explorer/releases/tag/v0.4.0)
+
+The packaged app is currently open on the new physics view. All automated, visual, packaging, signing, and archive checks passed.
+
+## User
+
+ok please add this as a personal project in my personal website and then also make a website for it as well that shows the application inline so people can use it/visualize results
+
+## Codex
+
+I’ll integrate LanternTrace as a first-class project on alex-dils.com and create a browser-safe interactive version of the explorer so visitors can use the maps, model comparisons, explainability, and Physics Field View inline—without downloading Electron. I’m locating the personal-site source and its deployment setup first, then I’ll wire the project page and embed together.
+
+## Codex
+
+I found the existing Vercel-backed personal site and confirmed LanternTrace can run in a browser with a small packaging layer—no Electron rewrite needed. I’m using the browser-control skill now because it gives me visual QA on both the embedded lab and the public deployment, including whether the controls remain usable inside the page.
+
+## Codex
+
+The browser bundle is built and weighs about 21 MB before CDN compression. I’m now wrapping it in a dedicated project page that distinguishes retrospective evidence from exploratory physics, exposes the actual benchmark numbers, and keeps the complete app interactive inline; the Mac download remains available for a larger native view.
+
+## Codex
+
+The in-app visual browser isn’t available in this session, so I can’t perform the planned screenshot-based QA there. The local site is running cleanly; I’m continuing with server, asset, syntax, and browser-runtime compatibility checks, then I’ll deploy and verify the actual public responses.
+
+## Codex
+
+The page and inline lab now pass the local compatibility checks, and the Vercel project is authenticated. I’ve also explicitly excluded local environment/configuration files from the upload. I’m deploying the production site now, then I’ll test the public project page, embedded app assets, paper, and download links.
