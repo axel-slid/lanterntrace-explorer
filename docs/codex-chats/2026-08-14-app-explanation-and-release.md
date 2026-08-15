@@ -881,3 +881,28 @@ I’ll turn the hero into a focused physics-map embed: rename it to “Tracing L
 ## Codex
 
 The hero now says “Tracing Lanternfly Invasion.” Its iframe uses a dedicated physics-embed mode that starts directly on the OG-RDE raised surface, removes the top navigation, analysis sidebar, search/settings chrome, benchmark status, and timeline, while retaining the map and compact physics card shown in your reference. “Open full screen” still leads to the complete application.
+
+## Codex
+
+Updated and deployed: [alex-dils.com/lanterntrace](https://alex-dils.com/lanterntrace/)
+
+- Hero now reads “Tracing Lanternfly Invasion.”
+- Hero embed opens directly in OG-RDE 3D Physics View.
+- Removed the sidebar, top navigation, search, settings, timeline, and benchmark overlays from the embed.
+- Retained the map and compact physics panel.
+- “Open full screen” links to the complete application.
+- Full application remains unchanged.
+
+The focused embed mode was added to GitHub in [commit 75e6e07](https://github.com/axel-slid/lanterntrace-explorer/commit/75e6e07).
+
+## User
+
+i dont see it
+
+## Codex
+
+I’m checking the exact public URL without a cache-busting query and the domain redirect path now. If Vercel is still serving the previous HTML at the clean URL, I’ll force a fresh production alias/deployment rather than asking you to refresh repeatedly.
+
+## Codex
+
+The clean public URL is serving the new version right now: both `alex-dils.com` and `www.alex-dils.com` return “Tracing Lanternfly Invasion” and the `?embed=physics` iframe. I’m checking the production alias itself and will give you a direct map-only URL as well, so we can distinguish a stale open tab from a deployment issue.
