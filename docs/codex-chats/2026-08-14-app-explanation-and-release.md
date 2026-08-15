@@ -343,3 +343,30 @@ The in-app visual browser isn’t available in this session, so I can’t perfor
 ## Codex
 
 The page and inline lab now pass the local compatibility checks, and the Vercel project is authenticated. I’ve also explicitly excluded local environment/configuration files from the upload. I’m deploying the production site now, then I’ll test the public project page, embedded app assets, paper, and download links.
+
+## Codex
+
+LanternTrace is live on your personal website:
+
+- [Project page with inline interactive app](https://alex-dils.com/lanterntrace/)
+- [Full-screen web application](https://alex-dils.com/lanterntrace/app/)
+- [Personal website](https://alex-dils.com/#side-projects)
+
+The page includes regional explainability, frozen benchmark results, clearly marked “OURS” models, Physics Field View instructions, scientific caveats, GitHub access, the paper, and the Mac download.
+
+I also added a reusable browser build command, refreshed the Codex chat archive, and pushed everything to GitHub in [commit f3a7e78](https://github.com/axel-slid/lanterntrace-explorer/commit/f3a7e78). All automated scientific and runtime checks passed. Existing unrelated paper/explainer edits were preserved.
+
+## User
+
+[Image attachment omitted from the text export]
+
+get rid of the dot here [Image #1] also have the app be on the hero. get rid of this  stuff What the map does not claim.
+Pressure fields are diagnostic model-score visualizations—not abundance, literal velocity, elapsed forecast time, calibrated confidence, quarantine guidance, or an operational boundary. Public records also reflect reporting effort. The strongest simple covariate baseline remains slightly ahead of OG-RDE in both frozen years, so the application is designed to expose tradeoffs rather than hide them.
+
+## Codex
+
+I’ll simplify the project page in exactly those three places: remove the glowing dot beside the version label, replace the decorative hero graphic with the real interactive application, and remove the entire “What the map does not claim” section. Then I’ll redeploy the production site and verify the new markup.
+
+## Codex
+
+The decorative hero graphic is gone—the real LanternTrace application now occupies the hero directly beneath the headline, with full-screen and paper links immediately above it. The requested caution block is completely removed, and the version label is now plain text with no dot. Local structure and asset checks pass; I’m publishing this revision now.
