@@ -711,7 +711,6 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
 }
 
 /* Professional usability pass: readable model workspace and persistent scientific status. */
-.prototype-badge { position: absolute; z-index: 20; top: 8px; right: 16px; padding: 4px 8px; border: 1px solid rgba(221, 214, 111, .35); border-radius: 5px; background: rgba(24, 30, 15, .9); color: #e6df82; font: 600 10px/1.2 'DM Mono', monospace; letter-spacing: .035em; pointer-events: none; }
 .methods-active .sidebar { width: 440px; background: #05251d; backdrop-filter: none; -webkit-backdrop-filter: none; }
 .methods-active .timeline-dock { left: 440px; }
 .methods-active .species-hero { display: none; }
@@ -766,7 +765,6 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
 @media (max-width: 1180px) {
-  .prototype-badge { max-width: 275px; white-space: normal; text-align: right; }
   .methods-active .sidebar { width: 420px; }
   .methods-active .timeline-dock { left: 420px; }
   .physics-hud { left: 438px; width: min(510px, calc(100% - 456px)); }

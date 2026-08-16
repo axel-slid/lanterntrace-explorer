@@ -1166,3 +1166,29 @@ get rid of the part where itsays research software v0.4.0
 ## Codex
 
 I’ll remove the “Research software · v0.4.0” label from the hero too and include it in the same shortened-page deployment.
+
+## Codex
+
+Removed and published:
+
+- All three numbered results/model sections
+- Their figures and captions
+- The entire “Continue exploring” section
+- The associated navigation links
+- “Research software · v0.4.0”
+
+[View the shortened LanternTrace page](https://www.alex-dils.com/lanterntrace/)
+
+## User
+
+[Image attachment omitted from the text export]
+
+get rid of this top part [Image #1]
+
+## Codex
+
+I’ll remove the “Research prototype · Retrospective · Not calibrated · v0.4.0” badge from the application header everywhere it appears, including the full-screen app and website copy, then republish it.
+
+## Codex
+
+The badge is removed from both the website app and the project source, and the app checks still pass. I’m publishing the cleaner header now.
