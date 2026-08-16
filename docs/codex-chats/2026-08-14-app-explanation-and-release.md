@@ -1105,3 +1105,64 @@ I’m using the site workflow to add two prominent hero actions: a direct macOS 
 ## Codex
 
 Both hero links are ready and the macOS download resolves to the current release. I’m publishing them now.
+
+## Codex
+
+Added and published two hero buttons:
+
+- **Download for macOS** — downloads the latest Apple Silicon release.
+- **GitHub** — opens the project repository.
+
+[View the updated hero](https://www.alex-dils.com/lanterntrace/)
+
+## User
+
+get rid of all o fhtis 01.
+Public observations reveal the moving frontier
+The explorer maps 62,791 coordinate-checked U.S. occurrence records from the GBIF index. A monthly evidence timeline shows how the report-derived core expanded from 2019 through 2025.
+
+Explore observations
+→
+Observed expansion of reported grid cells over time beside the 2025 frozen frontier-risk map
+Observed expansion + frozen 2025 risk
+Actual study output
+02.
+Frozen replay makes model comparisons concrete
+Coefficients stop after 2023. The benchmark then ranks previously unreported 0.2° cells for first reports in 2024 and 2025, exposing exact top-5% allocations and observed hits.
+
+Compare models
+→
+Frozen OG-RDE relative-risk maps for 2024 and 2025 showing top-five-percent allocations and observed first reports
+2024 and 2025 frozen first-report replay
+OG-RDE · ours
+03.
+Model physics become a field you can inspect
+Switch among Fisher–KPP, climate, transport, full mechanistic, and OG-RDE surfaces. Animated thresholds reveal the score front while vectors show the local direction of increasing model pressure.
+
+Open physics view
+→
+OG-RDE three-dimensional physics field over the northeastern United States with pressure cells and local gradient vectors
+Animated model pressure field
+OG-RDE · ours
+Continue exploring
+
+Methods
+Read the technical paper
+↗
+Open source
+Inspect code and provenance
+↗
+Portfolio
+Return to Alex Dils
+
+## Codex
+
+I’m removing the entire three-chapter results section and the complete “Continue exploring” links section, along with their now-broken navigation entries. Then I’ll publish the shortened page.
+
+## User
+
+get rid of the part where itsays research software v0.4.0
+
+## Codex
+
+I’ll remove the “Research software · v0.4.0” label from the hero too and include it in the same shortened-page deployment.
