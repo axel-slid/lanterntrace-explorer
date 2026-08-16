@@ -1192,3 +1192,97 @@ I’ll remove the “Research prototype · Retrospective · Not calibrated · v0
 ## Codex
 
 The badge is removed from both the website app and the project source, and the app checks still pass. I’m publishing the cleaner header now.
+
+## Codex
+
+Removed the prototype/status badge from the app header and published it.
+
+[View the updated LanternTrace app](https://www.alex-dils.com/lanterntrace/app/)
+
+## User
+
+what is running the backend for all of the stuff in alex-dils.com
+
+## Codex
+
+I’m checking the live response headers and the website’s deployment configuration so I can separate what is genuinely server-backed from what is static or runs entirely in the browser.
+
+## Codex
+
+The main picture is already clear: alex-dils.com does not currently have a conventional application backend. I’m doing one last route-by-route check for hidden API functions or database calls before I summarize the exceptions.
+
+## Codex
+
+There is effectively no custom backend running alex-dils.com right now.
+
+The architecture is:
+
+```text
+Browser → Vercel CDN/static hosting → HTML, CSS, JavaScript, images and files
+```
+
+Vercel currently handles:
+
+- Domain and HTTPS
+- Static-file hosting
+- CDN caching
+- Redirects and clean routes such as `/openleaf` and `/lanterntrace`
+- Production deployments
+
+The individual projects work like this:
+
+- **OpenLeaf, BSCode and Set Player:** static product pages. Installation scripts are static files; source code and downloads come from GitHub.
+- **LanternTrace:** calculations and model results are bundled as static JavaScript data. The map runs client-side with MapLibre. It requests map tiles from OpenFreeMap/CARTO and individual occurrence details from the public GBIF API.
+- **Portfolio and side projects:** static pages, with a little browser storage and service-worker caching.
+
+There are currently no:
+
+- Vercel Functions or `/api` routes
+- Node/Express server
+- Database
+- Authentication server
+- Persistent cloud application state
+- Server-side model computation
+
+So “the backend” is essentially **Vercel’s static hosting infrastructure plus external public services such as GitHub, GBIF and map-tile providers**. Any downloaded Electron/Node applications run their backend logic locally on the user’s Mac.
+
+## User
+
+all free right?.
+
+## Codex
+
+Mostly—but not literally everything. I’m checking the current official limits for Vercel, GitHub, GBIF, and the map providers so I can flag anything that could start costing money.
+
+## Codex
+
+Yes—the site’s current architecture can run for **$0/month**, assuming your Vercel account is on Hobby.
+
+- **Vercel:** Hobby is $0/month, including 1 million edge requests and 100 GB transfer monthly. It is limited to personal/non-commercial use. [Vercel pricing](https://vercel.com/pricing)
+- **GitHub repositories and release downloads:** free. GitHub says release assets have no total storage or bandwidth limit, although each asset must be under 2 GiB. [GitHub Releases limits](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)
+- **OpenFreeMap:** explicitly free with unlimited public-instance map views and requests. [OpenFreeMap](https://openfreemap.org/)
+- **GBIF API/data:** free and open, but individual dataset licenses and attribution requirements still apply. [GBIF terms](https://www.gbif.org/terms)
+- **OpenStreetMap, Google Fonts and other browser libraries:** free under their respective usage and attribution terms.
+
+The exception is **`alex-dils.com` itself**: domain registration normally costs an annual renewal fee. So the likely operating cost is:
+
+```text
+Hosting/backend: $0
+GitHub downloads: $0
+Maps and data APIs: $0
+Domain renewal: paid annually
+```
+
+I can confirm the architecture uses free services, but I cannot see whether your Vercel account itself has been manually upgraded to a paid plan.
+
+## User
+
+get rid of the thing that says homepage on the top left
+
+## Codex
+
+I’ll locate the exact “Homepage” label in the live site source, remove it from the top-left area, and republish the page without disturbing the map controls.
+
+## Codex
+
+The top-left “Homepage” link is removed. The updated navigation is publishing now.
