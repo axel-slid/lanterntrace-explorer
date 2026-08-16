@@ -5,7 +5,9 @@ const observationMetadata = observationBundle.metadata;
 const previewObservationPoints = observationPoints.filter((_, index) => index % 20 === 0);
 const modelBundle = window.LanternTraceModels || { metadata: {}, variants: [], topFive: [], models: {} };
 const benchmarkBundle = window.LanternTraceBenchmark || { metadata: {}, models: [], years: {} };
-const physicsEmbedMode = new URLSearchParams(window.location.search).get('embed') === 'physics';
+const embedMode = new URLSearchParams(window.location.search).get('embed');
+const physicsEmbedMode = embedMode === 'physics' || embedMode === 'hero';
+const heroMapEmbedMode = embedMode === 'hero';
 let selectedModelId = modelBundle.defaultModel || modelBundle.topFive?.[0] || null;
 let selectedBenchmarkModelId = benchmarkBundle.models.find((model) => model.id === 'og_rde')?.id || benchmarkBundle.models[0]?.id || null;
 let benchmarkYear = 2025;
@@ -1890,6 +1892,7 @@ function setupInteractions() {
 document.addEventListener('DOMContentLoaded', () => {
   if (physicsEmbedMode) {
     document.documentElement.classList.add('physics-embed');
+    if (heroMapEmbedMode) document.documentElement.classList.add('hero-map-embed');
     activeSection = 'methods';
     activeLabMode = 'benchmark';
     selectedBenchmarkModelId = 'og_rde';

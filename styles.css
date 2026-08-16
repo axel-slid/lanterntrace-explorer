@@ -808,5 +808,6 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
 .physics-embed .physics-hud { left: 16px; bottom: 18px; width: min(420px, calc(100% - 32px)); }
 .physics-embed .map-attribution { right: 12px; bottom: 8px; }
 .physics-embed .map-state { top: 18px; }
+.hero-map-embed .physics-hud { display: none !important; }
 #scenario-lab-panel .model-rank { justify-content: center; }
 #scenario-lab-panel .model-score { display: none; }

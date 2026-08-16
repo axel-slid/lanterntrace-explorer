@@ -38,7 +38,8 @@ const htmlSource = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 for (const marker of ['lt-physics-field', 'lt-physics-height', 'lt-physics-front', 'lt-physics-vectors']) assert.ok(appSource.includes(marker), `Missing physics map layer ${marker}`);
 assert.ok(htmlSource.includes('id="physics-view-inline"'), 'Missing Physics View toggle');
 assert.ok(appSource.includes('not abundance, calibrated velocity, or a literal time forecast'), 'Missing physics-view interpretation caveat');
-assert.ok(appSource.includes("get('embed') === 'physics'"), 'Missing focused physics embed mode');
+assert.ok(appSource.includes("embedMode === 'physics' || embedMode === 'hero'"), 'Missing focused physics embed modes');
 assert.ok(fs.readFileSync(path.join(root, 'styles.css'), 'utf8').includes('.physics-embed .sidebar'), 'Missing focused physics embed layout');
+assert.ok(fs.readFileSync(path.join(root, 'styles.css'), 'utf8').includes('.hero-map-embed .physics-hud'), 'Missing controls-free hero map layout');
 
 console.log('Verified five frozen physics surfaces, local gradient vectors, map layers, and interpretation labeling.');

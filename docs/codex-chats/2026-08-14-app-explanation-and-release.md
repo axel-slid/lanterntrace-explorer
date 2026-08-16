@@ -970,3 +970,43 @@ The production deployment succeeded. I’m checking the live redirect chain plus
 ## Codex
 
 The live checks now pass: `/lanterntrace` redirects correctly, and the page, stylesheet, map preview, and script all return `200` with the right content types. I’m recording this fix in the project’s Codex-chat archive and pushing only that archive update, while leaving the unrelated paper files untouched.
+
+## Codex
+
+Fixed and deployed.
+
+The problem was that `/lanterntrace` loaded assets from the domain root. It now redirects correctly to `/lanterntrace/`, where the CSS, map preview, and JavaScript all return `200`.
+
+[Open the fixed LanternTrace page](https://www.alex-dils.com/lanterntrace/)
+
+I also archived this work in the GitHub Codex-chat history and pushed commit `09250ba`. Reload the existing tab once if it was already open.
+
+## User
+
+bro wtf please make it an interactive map on the hero
+
+## Codex
+
+You’re right—the static screenshot is not what you asked for. I’m using the site-building workflow to replace it with the actual live, draggable/zoomable LanternTrace map in the hero, with the controls hidden and a clear link to the full application.
+
+## User
+
+[Image attachment omitted from the text export]
+
+make these visualizations better and more real [Image #1]
+
+## Codex
+
+I’ll handle both together: the hero becomes the real interactive physics map, and the lower “demo-looking” graphics will be replaced with evidence-based visuals drawn from the actual LanternTrace outputs—real geography, real cells, and exact benchmark values.
+
+## Codex
+
+The hero is now wired to the actual live OG-RDE map rather than an image, and the four lower panels now use the project’s real evaluation figures. I’m checking the embedded-map mode and responsive layout before publishing.
+
+## Codex
+
+The interactive-map mode and the real research visuals have passed their checks. I’m publishing them to the existing LanternTrace URL now.
+
+## Codex
+
+It’s live now: the hero is the draggable/zoomable OG-RDE map with the app chrome removed, and the lower panels use the actual study maps and audits instead of decorative placeholders. I’m saving the matching embed mode and this conversation back to the LanternTrace repository.
