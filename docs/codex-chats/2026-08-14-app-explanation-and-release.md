@@ -1082,3 +1082,26 @@ Download LanternTrace
 ## Codex
 
 I’ll remove that entire “Map the evidence / Interrogate the model” journey section as well, including all four cards.
+
+## Codex
+
+Removed and published:
+
+- The dot beside “Discover more”
+- Both quoted text sections
+- The regional-changes chapter
+- The entire “Map the evidence / Interrogate the model” card section
+
+[View the updated LanternTrace site](https://www.alex-dils.com/lanterntrace/)
+
+## User
+
+add a downloaad on macos and github in the hero
+
+## Codex
+
+I’m using the site workflow to add two prominent hero actions: a direct macOS download and a GitHub link, positioned with the existing hero copy and responsive on mobile.
+
+## Codex
+
+Both hero links are ready and the macOS download resolves to the current release. I’m publishing them now.
