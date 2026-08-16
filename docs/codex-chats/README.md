@@ -20,4 +20,4 @@ The exporter is [`scripts/export_codex_chats.py`](../../scripts/export_codex_cha
 - [Lay explainer work](2026-08-11-lay-explainer.md) — 24 dialogue messages
 - [LanternTrace report access in OpenLeaf](2026-08-12-openleaf-report-access.md) — 5 dialogue messages
 - [Research-paper rewrite](2026-08-12-paper-rewrite.md) — 19 dialogue messages
-- [App explanation and GitHub release](2026-08-14-app-explanation-and-release.md) — 84 dialogue messages
+- [App explanation and GitHub release](2026-08-14-app-explanation-and-release.md) — 93 dialogue messages

@@ -1010,3 +1010,75 @@ The interactive-map mode and the real research visuals have passed their checks.
 ## Codex
 
 It’s live now: the hero is the draggable/zoomable OG-RDE map with the app chrome removed, and the lower panels use the actual study maps and audits instead of decorative placeholders. I’m saving the matching embed mode and this conversation back to the LanternTrace repository.
+
+## Codex
+
+Fixed and live: [alex-dils.com/lanterntrace](https://www.alex-dils.com/lanterntrace/)
+
+- Hero now contains the real draggable and zoomable OG-RDE map.
+- App controls are hidden in the hero.
+- “Open full screen” launches the complete application.
+- Decorative lower graphics were replaced with actual study maps, frozen predictions, and model-agreement results.
+
+Reload the page once if it was already open.
+
+## User
+
+get rid of that little dot here 
+Discover more
+
+## Codex
+
+I’m using the site workflow for this small cleanup. I’ll remove the glowing dot beside “Discover more” and publish the change to the live page.
+
+## User
+
+get rid of this Built from public evidence and reproducible scientific inputs. Every map layer remains traceable to its source. get rid of this “A useful model should show its work: what changed, where it changed, and which mechanism produced the pattern.”
+
+## Codex
+
+Got it. I’m removing both lines entirely—the public-evidence intro and the full model-principle quote block—then I’ll republish once with all three removals included.
+
+## User
+
+get rid of this Regional changes explain what “ours” actually changed
+Cook-2021 and OG-RDE can be compared cell by cell. The explanation view marks gained and lost allocations, regional hit changes, rank movement, and the diffusion → climate → learned-fusion trace.
+
+Trace the changes
+→
+
+## Codex
+
+Understood. I’m removing that entire regional-changes chapter, including its accompanying visualization, so it doesn’t leave an empty panel.
+
+## User
+
+get rid of this Map the evidence.
+Interrogate the model.
+Explore map
+→
+View
+more
+Explore the invasion timeline
+Move through monthly evidence and inspect individual public records.
+
+01
+View
+more
+Navigate models & results
+Compare frozen rankings, allocations, first reports, and model provenance.
+
+02
+View
+more
+Examine physics fields
+Toggle 3D surfaces, 2D fields, vectors, and animated growth sweeps.
+
+03
+Get
+app
+Download LanternTrace
+
+## Codex
+
+I’ll remove that entire “Map the evidence / Interrogate the model” journey section as well, including all four cards.
