@@ -42,7 +42,10 @@ function createWindow() {
     }
     return { action: 'deny' };
   });
-  window.loadFile('index.html');
+  // Keep the desktop shell on the same current build as the public explorer.
+  // The bundled page remains an offline fallback.
+  window.loadURL('https://www.alex-dils.com/lanterntrace/app/');
+  window.webContents.once('did-fail-load', () => window.loadFile('index.html'));
 }
 
 app.whenReady().then(() => {
