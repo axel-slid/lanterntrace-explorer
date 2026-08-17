@@ -16,7 +16,7 @@ function createWindow() {
     minHeight: 720,
     backgroundColor: '#071326',
     title: 'LanternTrace Explorer',
-    titleBarStyle: 'hiddenInset',
+    titleBarStyle: 'hidden',
     trafficLightPosition: { x: 18, y: 17 },
     autoHideMenuBar: true,
     webPreferences: {
