@@ -44,7 +44,7 @@ function createWindow() {
   });
   // Keep the desktop shell on the same current build as the public explorer.
   // The bundled page remains an offline fallback.
-  window.loadURL('https://www.alex-dils.com/lanterntrace/app/');
+  window.loadURL('https://www.alex-dils.com/lanterntrace/app/?v=20260817-topography');
   window.webContents.once('did-fail-load', () => window.loadFile('index.html'));
 }
 
