@@ -26,9 +26,10 @@ def main() -> None:
     display = load_window_json(ROOT / "generated/model-results.js", "LanternTraceModels")
     assert benchmark["metadata"]["targets"] == [2024, 2025]
     assert benchmark["metadata"]["endpoint"].startswith("cells first reported")
-    assert len(benchmark["models"]) == 8
+    assert len(benchmark["models"]) == 10
     assert {model["id"] for model in benchmark["models"]} >= {
-        "og_rde", "covariate_hazard", "transport_rd", "cook_2021_kernel"
+        "eco_rd", "og_rde", "covariate_hazard", "transport_rd",
+        "ruzzier_2025_transfer", "cook_2021_kernel"
     }
     assert set(benchmark["years"]) == {"2024", "2025"}
     for payload in benchmark["years"].values():
@@ -41,7 +42,7 @@ def main() -> None:
     provenance = json.loads((ROOT / "research/results/data_provenance.json").read_text())
     assert isinstance(provenance, dict) and provenance.get("sha256")
     input_lock = json.loads((ROOT / "research/input-lock.json").read_text())
-    for relative in ("generated/observations.js", ".model-cache/ailanthus-altissima-ne.json"):
+    for relative in ("generated/observations.js", ".model-cache/host-vegetation-ne.json"):
         digest = hashlib.sha256((ROOT / relative).read_bytes()).hexdigest()
         assert digest == input_lock[relative]["sha256"]
     assert json.loads((ROOT / "research/results/study_summary.json").read_text())

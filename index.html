@@ -65,7 +65,7 @@
             <div class="benchmark-summary"><span>PRE-2024 COEFFICIENT FREEZE</span><b>FIRST-REPORT REPLAY</b><small>2024–2025 · annual state updates · no target-year refitting</small></div>
             <div class="benchmark-year" role="group" aria-label="Frozen evaluation year"><button type="button" data-benchmark-year="2024">2024</button><button class="active" type="button" data-benchmark-year="2025">2025</button></div>
             <button id="physics-view-inline" class="compare-models-inline physics-view-inline" type="button" aria-pressed="false"><span class="compare-icon">∿</span><span><b>Physics field view</b><small>Animated pressure surface + local gradient vectors</small></span><em>OFF</em></button>
-            <button id="explain-benchmark-inline" class="compare-models-inline explain-result-inline active" type="button" aria-pressed="true"><span class="compare-icon">Δ</span><span><b>Explain past literature → ours</b><small>Cook-2021 → OG-RDE (OURS) · regional changes + physics trace</small></span><em>ON</em></button>
+            <button id="explain-benchmark-inline" class="compare-models-inline explain-result-inline active" type="button" aria-pressed="true"><span class="compare-icon">Δ</span><span><b>Explain past literature → ours</b><small>Cook-2021 → Eco-RD (OURS) · regional changes + physics trace</small></span><em>ON</em></button>
             <button id="compare-benchmark-inline" class="compare-models-inline" type="button" aria-pressed="false"><span class="compare-icon">≋</span><span><b>Compare top-5% allocations</b><small>OG-RDE, covariate, Transport RD, and Cook-2021</small></span><em>OFF</em></button>
             <div id="benchmark-explanation" class="benchmark-explanation" aria-live="polite"></div>
             <div id="benchmark-ranking" class="model-ranking benchmark-ranking" aria-label="Frozen first-report model comparisons"></div>
@@ -112,7 +112,7 @@
 
         <section id="model-comparison-legend" class="model-comparison-legend hidden" aria-label="Compared diffusion models"></section>
         <section id="physics-hud" class="physics-hud hidden" aria-label="Physics field controls">
-          <div class="physics-hud-head"><div><span>MODEL-DERIVED PHYSICS FIELD</span><b id="physics-hud-model">OG-RDE · OURS</b></div><button id="physics-play" type="button" aria-label="Pause physics growth sweep">Ⅱ</button></div>
+          <div class="physics-hud-head"><div><span>MODEL-DERIVED PHYSICS FIELD</span><b id="physics-hud-model">ECO-RD · OURS</b></div><button id="physics-play" type="button" aria-label="Pause physics growth sweep">Ⅱ</button></div>
           <div id="physics-model-options" class="physics-model-options" role="group" aria-label="Physics model surface"></div>
           <div class="physics-display-options" role="group" aria-label="Physics surface display"><button type="button" class="active" data-physics-display="height" aria-pressed="true">3D SURFACE</button><button type="button" data-physics-display="field" aria-pressed="false">2D FIELD</button></div>
           <div class="physics-key"><span><i class="physics-low"></i>lower pressure</span><span><i class="physics-high"></i>higher pressure</span><span><i class="physics-front"></i>growth front</span><span><i class="physics-vector">↗</i>local gradient</span></div>

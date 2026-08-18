@@ -13,6 +13,7 @@ generated/*
 !generated/frozen-benchmark.js
 .model-cache/*
 !.model-cache/ailanthus-altissima-ne.json
+!.model-cache/host-vegetation-ne.json
 
 # Unreferenced 2.4 MB intermediate for lanternfly-cutout.png; kept locally, not published
 assets/lanternfly-cutout-source.png

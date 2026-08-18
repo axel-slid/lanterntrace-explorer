@@ -12,6 +12,71 @@
     "datedCount": 62789,
     "excludedUndatedCount": 12
   },
+  "hostVegetationMetadata": {
+    "name": "Northeastern U.S. spotted-lanternfly host-vegetation occurrence snapshot",
+    "retrieved": "2026-08-17",
+    "source": "GBIF occurrence search API",
+    "sourceUrl": "https://api.gbif.org/v1/occurrence/search",
+    "bounds": {
+      "west": -82,
+      "east": -68,
+      "south": 37,
+      "north": 47
+    },
+    "recordLimitPerTaxon": 3600,
+    "weighting": "Relative mean first-instar survival days reported by Nixon et al. (2020), doi:10.1093/ee/nvaa126.",
+    "caveat": "Occurrence density is an effort-biased host-availability proxy, not vegetation biomass or complete host coverage.",
+    "taxa": [
+      {
+        "name": "Tree-of-heaven",
+        "scientificName": "Ailanthus altissima",
+        "taxonKey": 3190653,
+        "survivalDays": 72.5,
+        "availableRecords": 31580,
+        "recordsUsed": 3600
+      },
+      {
+        "name": "Wild grape",
+        "scientificName": "Vitis",
+        "taxonKey": 7467468,
+        "survivalDays": 63.9,
+        "availableRecords": 16545,
+        "recordsUsed": 3600
+      },
+      {
+        "name": "Black walnut",
+        "scientificName": "Juglans nigra",
+        "taxonKey": 3054357,
+        "survivalDays": 62.9,
+        "availableRecords": 18392,
+        "recordsUsed": 3600
+      },
+      {
+        "name": "Silver maple",
+        "scientificName": "Acer saccharinum",
+        "taxonKey": 3189837,
+        "survivalDays": 58,
+        "availableRecords": 64904,
+        "recordsUsed": 3600
+      },
+      {
+        "name": "Willow",
+        "scientificName": "Salix",
+        "taxonKey": 3039576,
+        "survivalDays": 47,
+        "availableRecords": 36931,
+        "recordsUsed": 3600
+      },
+      {
+        "name": "Red maple",
+        "scientificName": "Acer rubrum",
+        "taxonKey": 3189883,
+        "survivalDays": 22.2,
+        "availableRecords": 95896,
+        "recordsUsed": 3600
+      }
+    ]
+  },
   "analysisAccounting": {
     "rawBundleRecords": 62791,
     "dated2014Through2026": 62788,
@@ -26,12 +91,12 @@
   },
   "sha256": {
     "occurrenceBundle": "cd49571c4d8cd326e8ccd9739bac6ba6e0d860ebfd399af253c99f72cdc27527",
-    "hostCache": "f00b6bde366d35c2bb6e0b6177174938fafaa8351a308181c2acec0d07e41238",
+    "hostCache": "400c99af0b208e78b17b06c93463a0287641b9b853fefde838dcbfec9a6b277f",
     "censusStateBoundary": "4295a503ff47e6787adfb520ad6706557e41c2ce57ced5a134087f8e35143a02",
     "worldclimElevation": "6a9f4e9a37f289d594ed1567b63be344a4dacf247f0b69756e81df031087e3bd",
     "worldclimBioclim": "00513224583665ec0f2f955a4ec252730c4deb2004cce9e793492a3f26df4dcf",
-    "studyScript": "2e651a82d2add872708fdf2552d4f1735b3808f3e1241a35dedb1aee6f6b24cd",
-    "solverScript": "9e4213cebd9b6676a36c6f32d3dd58480721d41544b0da4f1fd4f455a4789165"
+    "studyScript": "cfb6064f7c4f48998ee949a14c34665267e792effe0b029e26009f66998c878b",
+    "solverScript": "412189034c098ba1dba92c46a5a80cd76cfa987636485eb21cabdf731effa49b"
   },
   "limitation": "Historical origins are reconstructed by event date from a 2026 snapshot; record availability timestamps and time-versioned host covariates are unavailable."
 }

@@ -13,7 +13,7 @@ python3 research/verify_artifacts.py
 mkdir -p research/paper/build output/pdf
 tectonic --keep-logs --outdir research/paper/build research/paper/lanterntrace.tex
 pages="$(pdfinfo research/paper/build/lanterntrace.pdf | awk '/^Pages:/ {print $2}')"
-test "$pages" = "11"
+test "$pages" = "13"
 
 repro_check_dir="$(mktemp -d "${TMPDIR:-/tmp}/lanterntrace-pdf-check.XXXXXX")"
 trap 'rm -rf -- "$repro_check_dir"' EXIT

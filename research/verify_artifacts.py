@@ -39,6 +39,8 @@ def main() -> None:
         "spatial_block_metrics.csv", "annual_paired_comparisons.csv",
         "frozen_temporal_metrics.csv", "frozen_block_metrics.csv",
         "frozen_bootstrap_summary.csv", "frozen_paired_comparisons.csv",
+        "eco_rd_tuning.csv", "eco_rd_paired_comparisons.csv",
+        "eco_rd_annual_paired_comparisons.csv", "frozen_eco_rd_paired_comparisons.csv",
     }
     missing = sorted(name for name in required_results if not (RESULTS / name).is_file())
     if missing:
@@ -54,8 +56,8 @@ def main() -> None:
     benchmark = json.loads(benchmark_text[len(prefix):].rstrip(";\n"))
     if benchmark.get("metadata", {}).get("targets") != [2024, 2025]:
         raise SystemExit("frozen benchmark app artifact has unexpected targets")
-    if len(benchmark.get("models", [])) != 8:
-        raise SystemExit("frozen benchmark app artifact must contain eight comparators")
+    if len(benchmark.get("models", [])) != 10:
+        raise SystemExit("frozen benchmark app artifact must contain ten comparators")
 
     print("Generated provenance, manifest, and result tables verified.")
 

@@ -9,7 +9,7 @@ const embedMode = new URLSearchParams(window.location.search).get('embed');
 const physicsEmbedMode = embedMode === 'physics' || embedMode === 'hero';
 const heroMapEmbedMode = embedMode === 'hero';
 let selectedModelId = modelBundle.defaultModel || modelBundle.topFive?.[0] || null;
-let selectedBenchmarkModelId = benchmarkBundle.models.find((model) => model.id === 'og_rde')?.id || benchmarkBundle.models[0]?.id || null;
+let selectedBenchmarkModelId = benchmarkBundle.models.find((model) => model.id === 'eco_rd')?.id || benchmarkBundle.models[0]?.id || null;
 let benchmarkYear = 2025;
 let activeLabMode = 'benchmark';
 let benchmarkComparisonEnabled = false;
@@ -29,12 +29,15 @@ const PLAYBACK_INTERVAL_MS = 120;
 const REDUCED_MOTION_PLAYBACK_INTERVAL_MS = 500;
 const modelColors = ['#78efb5', '#f2c96d', '#73b9ff', '#dd91f3', '#ff907d'];
 const benchmarkColors = {
+  eco_rd: '#d8ff78', ruzzier_2025_transfer: '#ff8e72',
   covariate_hazard: '#73c9d5', og_rde: '#78efb5', transport_rd: '#f2c96d', climate_rd: '#73b9ff',
   fisher_kpp: '#a8d98b', full_mechanistic: '#d79b70', cook_2021_kernel: '#b18be3', distance_kernel: '#9ca8a2'
 };
 const benchmarkOwnership = {
+  eco_rd: { label: 'OURS · PRIMARY PHYSICS', className: 'ours primary', detail: 'pre-2024-fitted climate and host-vegetation reaction-diffusion model' },
+  ruzzier_2025_transfer: { label: 'PAST LITERATURE', className: 'literature', detail: 'transferred Ruzzier et al. 2025 resistance-distance comparator' },
   covariate_hazard: { label: 'OURS · CONTROL', className: 'ours', detail: 'study-built no-physics control' },
-  og_rde: { label: 'OURS · PRIMARY', className: 'ours primary', detail: 'primary observation-guided model' },
+  og_rde: { label: 'OURS · LEARNED CONTROL', className: 'ours', detail: 'observation-guided learned comparison model' },
   transport_rd: { label: 'OURS · PHYSICS', className: 'ours', detail: 'study-built mechanistic variant' },
   climate_rd: { label: 'OURS · PHYSICS', className: 'ours', detail: 'study-built mechanistic variant' },
   full_mechanistic: { label: 'OURS · PHYSICS', className: 'ours', detail: 'study-built mechanistic variant' },
@@ -42,10 +45,12 @@ const benchmarkOwnership = {
   cook_2021_kernel: { label: 'PAST LITERATURE', className: 'literature', detail: 'transferred Cook et al. 2021 comparator' },
   distance_kernel: { label: 'SIMPLE BASELINE', className: 'baseline', detail: 'distance-only baseline' }
 };
-const benchmarkComparisonIds = ['covariate_hazard', 'og_rde', 'transport_rd', 'cook_2021_kernel'];
-const benchmarkExplainModels = { past: 'cook_2021_kernel', ours: 'og_rde', diffusion: 'fisher_kpp', climate: 'climate_rd' };
-const physicsModelIds = ['fisher_kpp', 'climate_rd', 'transport_rd', 'full_mechanistic', 'og_rde'];
+const benchmarkComparisonIds = ['eco_rd', 'covariate_hazard', 'og_rde', 'ruzzier_2025_transfer', 'cook_2021_kernel'];
+const benchmarkExplainModels = { past: 'cook_2021_kernel', ours: 'eco_rd', diffusion: 'fisher_kpp', climate: 'climate_rd' };
+const physicsModelIds = ['fisher_kpp', 'climate_rd', 'ruzzier_2025_transfer', 'eco_rd'];
 const physicsProfiles = {
+  eco_rd: { short: 'ECO-RD · OURS', mechanism: 'fitted climate + host-vegetation reaction-diffusion', terms: '∇·(D H(C,V)∇u) + r H(C,V)u(1−u)' },
+  ruzzier_2025_transfer: { short: 'RUZZIER-2025', mechanism: 'published resistance transform and annual dispersal scale', terms: 'exp(−cost distance / 25.418 km)' },
   fisher_kpp: { short: 'FISHER–KPP', mechanism: 'local diffusion + logistic growth', terms: 'D∇u + ru(1−u)' },
   climate_rd: { short: 'CLIMATE RD', mechanism: 'climate-varying diffusion and growth', terms: 'D(x)∇u + r(x)u(1−u)' },
   transport_rd: { short: 'TRANSPORT RD', mechanism: 'local diffusion + directional transport', terms: 'D∇u + J + A' },
@@ -627,7 +632,7 @@ function physicsTraceMarkup(record) {
     { label: 'Past literature proximity', model: 'Cook-2021', score: record.past, delta: null },
     { label: 'Local diffusion wave', model: 'Fisher–KPP', score: record.diffusion, delta: record.diffusionDelta },
     { label: 'Climate-modified wave · study physics variant', model: 'Climate RD · OURS', score: record.climate, delta: record.climateDelta },
-    { label: 'Observation-guided fusion · primary model', model: 'OG-RDE · OURS', score: record.ours, delta: record.fusionDelta }
+    { label: 'Climate + host vegetation · fitted physics', model: 'ECO-RD · OURS', score: record.ours, delta: record.fusionDelta }
   ];
   const contrasts = [
     { key: 'local diffusion', value: record.diffusionDelta },
@@ -665,7 +670,7 @@ function renderBenchmarkExplanation() {
   container.innerHTML = `<div class="result-comparison-head">
       <span><i class="past"></i><small>PAST LITERATURE</small><b>Cook-2021</b></span>
       <strong>→</strong>
-      <span><i class="ours"></i><small>OURS · PRIMARY MODEL</small><b>OG-RDE</b></span>
+      <span><i class="ours"></i><small>OURS · PRIMARY PHYSICS</small><b>ECO-RD</b></span>
     </div>
     <div class="result-kpis">
       <span><small>AP CHANGE</small><b>+${summary.apDelta.toFixed(3)}</b></span>
@@ -948,9 +953,9 @@ function renderBenchmarkLab() {
   const selected = benchmarkModel();
   if (selected) {
     const metric = selected.metrics[String(benchmarkYear)];
-    const difference = selected.ogRdeDifference;
+    const difference = selected.ecoRdDifference;
     const comparison = difference
-      ? `${difference.mean >= 0 ? '+' : ''}${difference.mean.toFixed(3)} vs OG-RDE within blocks (${difference.interval[0].toFixed(3)} to ${difference.interval[1].toFixed(3)})`
+      ? `${difference.mean >= 0 ? '+' : ''}${difference.mean.toFixed(3)} vs Eco-RD within blocks (${difference.interval[0].toFixed(3)} to ${difference.interval[1].toFixed(3)})`
       : 'Reference model for paired within-block differences';
     const ownership = benchmarkOwnership[selected.id] || { label: 'COMPARATOR', detail: 'benchmark comparator' };
     detail.innerHTML = `<div class="model-detail-head"><span>SELECTED · ${ownership.label}</span><b>${benchmarkYear}</b></div>
@@ -996,7 +1001,7 @@ function renderBenchmarkLab() {
       status.innerHTML = `<b>Physics field view · ${benchmarkYear}</b>${selectedModel.name} · ${profile?.mechanism || 'model-derived relative-pressure surface'}<br><em>surface = frozen relative rank · arrows = local finite-difference gradient · animation is diagnostic, not elapsed time</em>`;
     } else if (benchmarkExplainEnabled) {
       const summary = benchmarkExplanationSummary();
-      status.innerHTML = `<b>Past literature → OURS · ${benchmarkYear}</b>Cook-2021 → OG-RDE (OURS · PRIMARY) · AP ${signedRank(summary.apDelta)} · top-5% hits ${summary.pastHits} → ${summary.oursHits}<br><em>${summary.reallocated} cells moved into our allocation · click any grid cell for its physics trace</em>`;
+      status.innerHTML = `<b>Past literature → OURS · ${benchmarkYear}</b>Cook-2021 → Eco-RD (OURS · PRIMARY PHYSICS) · AP ${signedRank(summary.apDelta)} · top-5% hits ${summary.pastHits} → ${summary.oursHits}<br><em>${summary.reallocated} cells moved into our allocation · click any grid cell for its physics trace</em>`;
     } else {
       status.innerHTML = `<b>Frozen first-report replay · ${benchmarkYear}</b>${selectedModel.name} · AP ${metric.averagePrecision.toFixed(3)} · R@5% ${metric.recallAt5Pct.toFixed(3)}<br><em>${yearData.truthIndices.length} first-report cells · relative rank, not occupancy probability</em>`;
     }

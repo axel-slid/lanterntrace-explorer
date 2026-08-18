@@ -9,7 +9,7 @@ vm.runInNewContext(fs.readFileSync(path.join(root, 'generated/frozen-benchmark.j
 
 const benchmark = context.window.LanternTraceBenchmark;
 const pastId = 'cook_2021_kernel';
-const oursId = 'og_rde';
+const oursId = 'eco_rd';
 
 function topIndices(yearData, modelId) {
   return new Set(yearData.eligibleIndices
@@ -31,10 +31,10 @@ function verifyYear(year, expected) {
   const hits = (indices) => [...indices].filter((index) => truth.has(index)).length;
   const movedIn = [...oursTop].filter((index) => !pastTop.has(index)).length;
   assert.equal(hits(pastTop), expected.pastHits, `Unexpected Cook-2021 top-5% hits for ${year}`);
-  assert.equal(hits(oursTop), expected.oursHits, `Unexpected OG-RDE top-5% hits for ${year}`);
+  assert.equal(hits(oursTop), expected.oursHits, `Unexpected Eco-RD top-5% hits for ${year}`);
   assert.equal(movedIn, expected.movedIn, `Unexpected reallocated-cell count for ${year}`);
 }
 
-verifyYear(2024, { pastHits: 31, oursHits: 36, movedIn: 15 });
-verifyYear(2025, { pastHits: 26, oursHits: 33, movedIn: 20 });
-console.log('Verified Cook-2021 → OG-RDE explanation counts for 2024 and 2025.');
+verifyYear(2024, { pastHits: 31, oursHits: 36, movedIn: 18 });
+verifyYear(2025, { pastHits: 26, oursHits: 35, movedIn: 18 });
+console.log('Verified Cook-2021 → Eco-RD explanation counts for 2024 and 2025.');

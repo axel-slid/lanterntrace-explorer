@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import importlib.util
 import hashlib
+import itertools
 import json
 import math
 import pathlib
@@ -23,6 +24,8 @@ import numpy as np
 import pandas as pd
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.ndimage import distance_transform_edt, gaussian_filter
+from scipy.sparse import csr_matrix
+from scipy.sparse.csgraph import dijkstra
 from scipy.stats import spearmanr
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score, roc_auc_score
@@ -45,6 +48,7 @@ DEVELOPMENT_TARGETS = [2022, 2023, 2024, 2025]
 FINAL_TARGET = 2026
 FROZEN_TRAINING_END = 2024
 FROZEN_TARGETS = [2024, 2025]
+ECO_TUNING_TARGETS = [2019, 2020, 2021, 2022, 2023]
 FEATURE_NAMES = [
     "local_20km", "local_45km", "regional_90km", "regional_160km",
     "distance_front", "host", "climate", "corridor", "urban",
@@ -70,6 +74,33 @@ MODEL_PARAMETERS = {
         "alphaPerKm": 0.045,
         "transfer": "published county-centroid kernel evaluated at 0.2-degree cell centers",
     },
+    "ruzzier2025Transfer": {
+        "citation": "Ruzzier et al. 2025, doi:10.3897/neobiota.103.154246",
+        "annualDispersalKm": 25.418,
+        "resistanceLogisticK": 15.0,
+        "resistanceInflection": 0.5,
+        "transfer": "published resistance function and dispersal scale applied to the study host-climate surface",
+    },
+    "ecoRdTuning": {
+        "targets": ECO_TUNING_TARGETS,
+        "objective": "mean annual average precision on pre-2024 first-report targets",
+        "candidateCount": 972,
+    },
+}
+
+ECO_PARAMETER_GRID = {
+    "diffusion": [.08, .13, .19, .28],
+    "growth": [.06, .13, .24],
+    "hostFloor": [0.0, .15, .35],
+    "climateFloor": [0.0, .15, .35],
+    "hostPower": [.6, 1.0, 1.6],
+    "climatePower": [.6, 1.0, 1.6],
+}
+
+ECO_NUMERICAL_SETTINGS = {
+    "initialSmoothingSigmaCells": 0.8,
+    "initialSmoothingWeight": 0.74,
+    "minimumConductivity": 0.08,
 }
 
 
@@ -145,7 +176,7 @@ def data_provenance(data: DataBundle) -> dict:
     observation_payload = json.loads(observation_text[len(prefix):].rstrip(";\n"))
     paths = {
         "occurrenceBundle": builder.OBSERVATIONS,
-        "hostCache": builder.CACHE / "ailanthus-altissima-ne.json",
+        "hostCache": builder.CACHE / "host-vegetation-ne.json",
         "censusStateBoundary": builder.CACHE / "cb_2025_us_state_500k.zip",
         "worldclimElevation": builder.CACHE / "wc2.1_10m_elev.zip",
         "worldclimBioclim": builder.CACHE / "wc2.1_10m_bio.zip",
@@ -154,6 +185,7 @@ def data_provenance(data: DataBundle) -> dict:
     }
     return {
         "occurrenceMetadata": observation_payload.get("metadata", {}),
+        "hostVegetationMetadata": data.cov.get("host_metadata", {}),
         "analysisAccounting": data.accounting,
         "censusBoundary": {"vintage": 2025, "url": builder.STATE_BOUNDARY_URL},
         "sha256": {name: sha256_file(path) for name, path in paths.items() if path.exists()},
@@ -238,6 +270,106 @@ def physics_risk(data: DataBundle, origin_year: int, name: str, months: int = 12
     final = builder.rollout(start, PHYSICS[name], data.cov, None, months)[-1]
     # Score only incremental frontier pressure, not already occupied cells.
     return np.clip(final - occupied * final, 0, 1)
+
+
+def eco_suitability(data: DataBundle, parameters: dict[str, float]) -> np.ndarray:
+    """Joint host-climate establishment surface used by Eco-RD.
+
+    Floors and powers are fitted on pre-2024 targets. The geometric mean keeps
+    either limiting resource from being silently replaced by the other.
+    """
+    host = parameters["hostFloor"] + (1 - parameters["hostFloor"]) * data.cov["host"]
+    climate = parameters["climateFloor"] + (1 - parameters["climateFloor"]) * data.cov["climate"]
+    joint = np.sqrt(np.power(host, parameters["hostPower"]) *
+                    np.power(climate, parameters["climatePower"]))
+    return np.clip(joint * data.cov["land"], 0, 1)
+
+
+def eco_rd_risk(data: DataBundle, origin_year: int, months: int,
+                parameters: dict[str, float]) -> np.ndarray:
+    """Solve the fitted host-climate reaction-diffusion model."""
+    occupied = data.history[origin_year]
+    sigma = ECO_NUMERICAL_SETTINGS["initialSmoothingSigmaCells"]
+    weight = ECO_NUMERICAL_SETTINGS["initialSmoothingWeight"]
+    state = np.maximum(occupied, gaussian_filter(occupied, sigma) * weight)
+    suitability = eco_suitability(data, parameters)
+    floor = ECO_NUMERICAL_SETTINGS["minimumConductivity"]
+    conductivity = data.cov["land"] * (floor + (1 - floor) * suitability)
+    for _ in range(months):
+        diffusion = parameters["diffusion"] * builder.diffusion_divergence(state, conductivity)
+        growth = parameters["growth"] * suitability * state * (1 - state)
+        state = np.clip(state + diffusion + growth, 0, 1)
+    return np.clip(state - occupied * state, 0, 1)
+
+
+def tune_eco_rd(data: DataBundle) -> tuple[dict[str, float], pd.DataFrame]:
+    """Select Eco-RD constants using only first-report targets through 2023."""
+    names = list(ECO_PARAMETER_GRID)
+    rows = []
+    for values in itertools.product(*(ECO_PARAMETER_GRID[name] for name in names)):
+        parameters = dict(zip(names, values))
+        annual = {}
+        for target_year in ECO_TUNING_TARGETS:
+            origin = target_year - 1
+            mask = eligible_mask(data, origin)
+            truth = target_new_cells(data, origin, target_year)[mask]
+            risk = eco_rd_risk(data, origin, 12, parameters)[mask]
+            annual[target_year] = float(average_precision_score(truth, risk))
+        rows.append({
+            **parameters,
+            **{f"ap_{year}": annual[year] for year in ECO_TUNING_TARGETS},
+            "mean_average_precision": float(np.mean(list(annual.values()))),
+            "worst_year_average_precision": float(np.min(list(annual.values()))),
+        })
+    tuning = pd.DataFrame(rows).sort_values(
+        ["mean_average_precision", "worst_year_average_precision"], ascending=False,
+    ).reset_index(drop=True)
+    best = {name: float(tuning.loc[0, name]) for name in names}
+    return best, tuning
+
+
+def ruzzier_2025_transfer(data: DataBundle, origin_year: int) -> np.ndarray:
+    """Transfer Ruzzier et al.'s resistance transform and dispersal distance.
+
+    Their landscape scale and covariate construction differ from ours, so this
+    is a published-form comparator rather than a numerical replication.
+    """
+    suitability = np.clip((data.cov["host"] + data.cov["climate"]) / 2, 0, 1)
+    k = MODEL_PARAMETERS["ruzzier2025Transfer"]["resistanceLogisticK"]
+    x0 = MODEL_PARAMETERS["ruzzier2025Transfer"]["resistanceInflection"]
+    resistance = 1 / (1 + np.exp(-k * (1 - suitability - x0)))
+    land = data.cov["land"] > .5
+    rows, cols, costs = [], [], []
+    height, width = builder.SHAPE
+    for y, x in np.column_stack(np.where(land)):
+        source = y * width + x
+        latitude = builder.SOUTH + (y + .5) * builder.STEP
+        for dy, dx in ((-1, -1), (-1, 0), (-1, 1), (0, -1),
+                       (0, 1), (1, -1), (1, 0), (1, 1)):
+            ny, nx = y + dy, x + dx
+            if not (0 <= ny < height and 0 <= nx < width and land[ny, nx]):
+                continue
+            target = ny * width + nx
+            north_km = abs(dy) * builder.STEP * 111.0
+            east_km = abs(dx) * builder.STEP * 111.0 * math.cos(math.radians(latitude))
+            distance_km = math.hypot(north_km, east_km)
+            face_resistance = (resistance[y, x] + resistance[ny, nx]) / 2
+            rows.append(source)
+            cols.append(target)
+            costs.append(distance_km * face_resistance)
+    node_count = height * width
+    super_source = node_count
+    occupied_nodes = np.flatnonzero((data.history[origin_year] > 0).ravel() & land.ravel())
+    rows.extend([super_source] * len(occupied_nodes))
+    cols.extend(occupied_nodes.tolist())
+    costs.extend([1e-12] * len(occupied_nodes))
+    graph = csr_matrix((costs, (rows, cols)), shape=(node_count + 1, node_count + 1))
+    cost_distance = dijkstra(graph, directed=True, indices=super_source)[:node_count]
+    scale = MODEL_PARAMETERS["ruzzier2025Transfer"]["annualDispersalKm"]
+    risk = np.exp(-cost_distance / scale).reshape(builder.SHAPE)
+    risk[~land] = 0
+    risk[data.history[origin_year] > 0] = 0
+    return np.nan_to_num(risk, nan=0, posinf=0, neginf=0)
 
 
 def cook_2021_kernel(source_mask: np.ndarray, alpha_per_km: float = .045) -> np.ndarray:
@@ -589,7 +721,7 @@ def regional_activation_metrics(year: int, scores: dict[str, np.ndarray], mask: 
     return rows
 
 
-def evaluate_year(data: DataBundle, target_year: int) -> tuple[list[dict], dict[str, np.ndarray], np.ndarray, np.ndarray, np.ndarray]:
+def evaluate_year(data: DataBundle, target_year: int, eco_parameters: dict[str, float]) -> tuple[list[dict], dict[str, np.ndarray], np.ndarray, np.ndarray, np.ndarray]:
     origin = target_year - 1
     months = 7 if target_year == 2026 else 12
     mask = eligible_mask(data, origin)
@@ -600,6 +732,8 @@ def evaluate_year(data: DataBundle, target_year: int) -> tuple[list[dict], dict[
     scores = {
         "Distance kernel": np.exp(-distance / 2.4),
         "Cook-2021 kernel": cook_2021_kernel(data.history[origin]),
+        "Ruzzier-2025 transfer": ruzzier_2025_transfer(data, origin),
+        "Eco-RD": eco_rd_risk(data, origin, months, eco_parameters),
         "Fisher-KPP": physics_risk(data, origin, "fisher", months),
         "Climate RD": physics_risk(data, origin, "climate", months),
         "Transport RD": physics_risk(data, origin, "transport", months),
@@ -616,7 +750,7 @@ def evaluate_year(data: DataBundle, target_year: int) -> tuple[list[dict], dict[
     return rows, scores, mask, truth_grid, effort_grid
 
 
-def evaluate_frozen_year(data: DataBundle, target_year: int) -> tuple[list[dict], dict[str, np.ndarray], np.ndarray, np.ndarray]:
+def evaluate_frozen_year(data: DataBundle, target_year: int, eco_parameters: dict[str, float]) -> tuple[list[dict], dict[str, np.ndarray], np.ndarray, np.ndarray]:
     """Replay a target after freezing learned coefficients before 2024.
 
     Annual event-date state is assimilated at each origin, as it would be in an
@@ -634,6 +768,8 @@ def evaluate_frozen_year(data: DataBundle, target_year: int) -> tuple[list[dict]
     scores = {
         "Distance kernel": np.exp(-distance / 2.4),
         "Cook-2021 kernel": cook_2021_kernel(data.history[origin]),
+        "Ruzzier-2025 transfer": ruzzier_2025_transfer(data, origin),
+        "Eco-RD": eco_rd_risk(data, origin, 12, eco_parameters),
         "Fisher-KPP": physics_risk(data, origin, "fisher", 12),
         "Climate RD": physics_risk(data, origin, "climate", 12),
         "Transport RD": physics_risk(data, origin, "transport", 12),
@@ -732,8 +868,9 @@ def export_frozen_benchmark(frozen_metrics: pd.DataFrame, frozen_summary: pd.Dat
                             frozen_comparisons: pd.DataFrame, frozen_predictions: dict) -> None:
     """Emit a compact, committed app artifact for the frozen evaluation replay."""
     model_order = [
-        "Covariate hazard", "OG-RDE", "Transport RD", "Climate RD",
-        "Fisher-KPP", "Full mechanistic", "Cook-2021 kernel", "Distance kernel",
+        "Eco-RD", "Covariate hazard", "OG-RDE", "Transport RD", "Climate RD",
+        "Fisher-KPP", "Full mechanistic", "Ruzzier-2025 transfer",
+        "Cook-2021 kernel", "Distance kernel",
     ]
     summary_by_model = frozen_summary.set_index("model")
     comparison_by_model = frozen_comparisons.set_index("competitor")
@@ -741,7 +878,7 @@ def export_frozen_benchmark(frozen_metrics: pd.DataFrame, frozen_summary: pd.Dat
     for model in model_order:
         annual = frozen_metrics[frozen_metrics.model == model].set_index("year")
         block = summary_by_model.loc[model]
-        comparison = comparison_by_model.loc[model] if model != "OG-RDE" else None
+        comparison = comparison_by_model.loc[model] if model != "Eco-RD" else None
         models.append({
             "id": model.lower().replace("-", "_").replace(" ", "_"),
             "name": model,
@@ -754,10 +891,10 @@ def export_frozen_benchmark(frozen_metrics: pd.DataFrame, frozen_summary: pd.Dat
             },
             "blockAveragePrecision": round(float(block.block_ap_mean), 6),
             "blockInterval": [round(float(block.block_ap_low), 6), round(float(block.block_ap_high), 6)],
-            "ogRdeDifference": None if comparison is None else {
+            "ecoRdDifference": None if comparison is None else {
                 "mean": round(float(-comparison.mean_delta_ap), 6),
                 "interval": [round(float(-comparison.delta_high), 6), round(float(-comparison.delta_low), 6)],
-                "meaning": f"{model} minus OG-RDE within-block AP",
+                "meaning": f"{model} minus Eco-RD within-block AP",
             },
         })
     years = {}
@@ -814,7 +951,7 @@ def make_figures(data: DataBundle, metrics: pd.DataFrame, summary: pd.DataFrame,
     axes[0].legend(frameon=False, fontsize=6.5, ncol=2)
 
     target = prediction_store[2025]
-    risk = target["scores"]["OG-RDE"]
+    risk = target["scores"]["Eco-RD"]
     image = axes[1].imshow(risk, origin="lower", extent=[builder.WEST, builder.EAST, builder.SOUTH, builder.NORTH],
                            cmap=LinearSegmentedColormap.from_list("risk", ["#f4f1e8", "#8fd3b6", green]), aspect="auto")
     yy, xx = np.where(target["truth"] > 0)
@@ -831,8 +968,9 @@ def make_figures(data: DataBundle, metrics: pd.DataFrame, summary: pd.DataFrame,
     fig.tight_layout()
     save_figure(fig, "fig1_endpoint_and_map")
 
-    selected_models = ["Distance kernel", "Cook-2021 kernel", "Reporting surface", "Covariate hazard", "Fisher-KPP",
-                       "Climate RD", "Transport RD", "Full mechanistic", "OG-RDE"]
+    selected_models = ["Distance kernel", "Cook-2021 kernel", "Ruzzier-2025 transfer", "Reporting surface",
+                       "Covariate hazard", "Fisher-KPP", "Climate RD", "Transport RD",
+                       "Full mechanistic", "OG-RDE", "Eco-RD"]
     primary = summary[summary.model.isin(selected_models)].sort_values("block_ap_mean")
     fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.35))
     for (model, endpoint_name), part in endpoint.groupby(["model", "endpoint"]):
@@ -855,9 +993,10 @@ def make_figures(data: DataBundle, metrics: pd.DataFrame, summary: pd.DataFrame,
     save_figure(fig, "fig2_benchmark")
 
     fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.7))
-    selected = ["Distance kernel", "Cook-2021 kernel", "Climate RD", "Transport RD", "OG-RDE"]
+    selected = ["Distance kernel", "Cook-2021 kernel", "Ruzzier-2025 transfer", "Climate RD", "Eco-RD"]
     palette = {"Distance kernel": "#888888", "Cook-2021 kernel": "#7b5aa6", "Climate RD": blue,
-               "Transport RD": gold, "OG-RDE": green}
+               "Transport RD": gold, "OG-RDE": "#7aa88f", "Eco-RD": green,
+               "Ruzzier-2025 transfer": coral}
     for name in selected:
         part = metrics[metrics.model == name]
         axes[0].plot(part.year, part.average_precision, marker="o", lw=1.7, color=palette[name], label=name)
@@ -888,7 +1027,7 @@ def make_figures(data: DataBundle, metrics: pd.DataFrame, summary: pd.DataFrame,
     save_figure(fig, "fig4_ablation")
 
     # Frozen temporal replay: coefficients use transitions only through 2023.
-    selected_frozen = ["Cook-2021 kernel", "Covariate hazard", "Climate RD", "Transport RD", "OG-RDE"]
+    selected_frozen = ["Cook-2021 kernel", "Ruzzier-2025 transfer", "Covariate hazard", "OG-RDE", "Eco-RD"]
     palette.update({"Covariate hazard": "#3c8c9e"})
     fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.7), gridspec_kw={"width_ratios": [1.03, .97]})
     for name in selected_frozen:
@@ -921,12 +1060,12 @@ def make_figures(data: DataBundle, metrics: pd.DataFrame, summary: pd.DataFrame,
     risk_cmap = LinearSegmentedColormap.from_list("frozen-risk", ["#f4f1e8", "#8fd3b6", green])
     for ax, year in zip(axes, FROZEN_TARGETS):
         item = frozen_predictions[year]
-        risk = item["scores"]["OG-RDE"].copy()
+        risk = item["scores"]["Eco-RD"].copy()
         risk[~item["mask"]] = np.nan
         image = ax.imshow(risk, origin="lower", extent=[builder.WEST, builder.EAST, builder.SOUTH, builder.NORTH],
                           cmap=risk_cmap, vmin=0, vmax=1, aspect="auto")
         eligible_flat = np.flatnonzero(item["mask"].ravel())
-        eligible_scores = item["scores"]["OG-RDE"].ravel()[eligible_flat]
+        eligible_scores = item["scores"]["Eco-RD"].ravel()[eligible_flat]
         selected = select_top_fraction(eligible_scores, .05)
         top_grid = np.zeros(builder.SHAPE, dtype=bool)
         top_grid.ravel()[eligible_flat[selected]] = True
@@ -937,19 +1076,19 @@ def make_figures(data: DataBundle, metrics: pd.DataFrame, summary: pd.DataFrame,
                    s=12, facecolors="none", edgecolors=coral, lw=.75)
         for ring in state_rings:
             ax.plot(ring[:, 0], ring[:, 1], color="#536960", lw=.22, alpha=.65)
-        recall = frozen_metrics[(frozen_metrics.year == year) & (frozen_metrics.model == "OG-RDE")].iloc[0]
+        recall = frozen_metrics[(frozen_metrics.year == year) & (frozen_metrics.model == "Eco-RD")].iloc[0]
         ax.set(title=f"{year}: AP {recall.average_precision:.3f}; R@5% {recall.recall_at_5pct:.3f}",
                xlabel="longitude", ylabel="latitude", xlim=(builder.WEST, builder.EAST),
                ylim=(builder.SOUTH, builder.NORTH))
     fig.colorbar(image, ax=axes, fraction=.025, pad=.02, label="relative risk rank")
-    fig.suptitle("Frozen OG-RDE predictions: gold = top 5%; coral = first reports", y=1.02, fontsize=10)
+    fig.suptitle("Frozen Eco-RD predictions: gold = top 5%; coral = first reports", y=1.02, fontsize=10)
     fig.subplots_adjust(wspace=.22, right=.92)
     save_figure(fig, "fig6_frozen_maps")
 
     # Operational yield curves answer how much of the frontier a survey budget captures.
     fractions = np.linspace(.01, .25, 25)
     fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.65))
-    for name in ["Distance kernel", "Cook-2021 kernel", "Covariate hazard", "OG-RDE"]:
+    for name in ["Distance kernel", "Cook-2021 kernel", "Ruzzier-2025 transfer", "Covariate hazard", "Eco-RD"]:
         annual_curves = []
         for year in FROZEN_TARGETS:
             item = frozen_predictions[year]
@@ -973,7 +1112,7 @@ def make_figures(data: DataBundle, metrics: pd.DataFrame, summary: pd.DataFrame,
         (1 - frozen_annual.prevalence)
     )
     frozen_annual = frozen_annual.sort_values("normalized_lift")
-    bar_colors = [green if name == "OG-RDE" else "#8aa99a" for name in frozen_annual.model]
+    bar_colors = [green if name == "Eco-RD" else "#8aa99a" for name in frozen_annual.model]
     axes[1].barh(frozen_annual.model, frozen_annual.normalized_lift, color=bar_colors)
     axes[1].set(xlabel="prevalence-normalized AP lift", title="Skill beyond frozen-target prevalence")
     axes[1].grid(axis="x", color="#e5e9e6", lw=.5)
@@ -981,8 +1120,8 @@ def make_figures(data: DataBundle, metrics: pd.DataFrame, summary: pd.DataFrame,
     save_figure(fig, "fig7_frozen_yield")
 
     # Agreement diagnostics distinguish shared signal from a unique model contribution.
-    diagnostic_models = ["Cook-2021 kernel", "Fisher-KPP", "Climate RD", "Transport RD",
-                         "Covariate hazard", "OG-RDE"]
+    diagnostic_models = ["Cook-2021 kernel", "Ruzzier-2025 transfer", "Fisher-KPP", "Climate RD",
+                         "Covariate hazard", "Eco-RD"]
     pooled = {}
     for name in diagnostic_models:
         pooled[name] = np.concatenate([
@@ -1001,9 +1140,9 @@ def make_figures(data: DataBundle, metrics: pd.DataFrame, summary: pd.DataFrame,
                          color="white" if value > .68 else "#24352e", fontsize=5.7)
     axes[0].set_title("Frozen score-rank agreement")
     fig.colorbar(heat, ax=axes[0], fraction=.044, pad=.03, label="Spearman correlation")
-    reference = frozen_blocks[frozen_blocks.model == "OG-RDE"][["year", "block", "average_precision"]]
+    reference = frozen_blocks[frozen_blocks.model == "Eco-RD"][["year", "block", "average_precision"]]
     deltas, labels = [], []
-    for competitor in ["Cook-2021 kernel", "Covariate hazard", "Transport RD"]:
+    for competitor in ["Cook-2021 kernel", "Ruzzier-2025 transfer", "Covariate hazard"]:
         other = frozen_blocks[frozen_blocks.model == competitor][["year", "block", "average_precision"]]
         paired = reference.merge(other, on=["year", "block"], suffixes=("_og", "_other"))
         deltas.append((paired.average_precision_og - paired.average_precision_other).to_numpy())
@@ -1013,20 +1152,51 @@ def make_figures(data: DataBundle, metrics: pd.DataFrame, summary: pd.DataFrame,
                     boxprops={"color": "#536960"}, whiskerprops={"color": "#8a9c94"},
                     capprops={"color": "#8a9c94"})
     axes[1].axvline(0, color="#555555", ls="--", lw=.8)
-    axes[1].set(xlabel="within-block AP: OG-RDE minus comparator",
-                title="Where does OG-RDE add value?")
+    axes[1].set(xlabel="within-block AP: Eco-RD minus comparator",
+                title="Where does Eco-RD add value?")
     axes[1].grid(axis="x", color="#e5e9e6", lw=.5)
     fig.tight_layout()
     save_figure(fig, "fig8_model_agreement")
+
+    # Eco-RD selection is separated visually from the untouched replay.
+    tuning = pd.read_csv(RESULTS / "eco_rd_tuning.csv")
+    fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.55), gridspec_kw={"width_ratios": [1.08, .92]})
+    grouped = tuning.groupby(["diffusion", "growth"], as_index=False)["mean_average_precision"].max()
+    for growth, part in grouped.groupby("growth"):
+        axes[0].plot(part.diffusion, part.mean_average_precision, marker="o", lw=1.7,
+                     label=fr"$r={growth:.2f}$/month")
+    axes[0].axvline(float(tuning.iloc[0].diffusion), color=green, ls="--", lw=.9)
+    axes[0].set(xlabel="candidate diffusion coefficient per month", ylabel="2019–2023 mean AP",
+                title="Pre-2024 Eco-RD parameter search")
+    axes[0].legend(frameon=False, fontsize=6.3)
+    axes[0].grid(color="#e5e9e6", lw=.5)
+    compared = ["Distance kernel", "Cook-2021 kernel", "Ruzzier-2025 transfer", "Eco-RD",
+                "OG-RDE", "Covariate hazard"]
+    holdout = frozen_metrics[frozen_metrics.model.isin(compared)].groupby("model").average_precision.mean().sort_values()
+    colors = [green if name == "Eco-RD" else (coral if "Ruzzier" in name else "#8aa99a") for name in holdout.index]
+    axes[1].barh(holdout.index, holdout.values, color=colors)
+    axes[1].set(xlabel="mean average precision", title="Untouched 2024–2025 replay", xlim=(0, .56))
+    axes[1].grid(axis="x", color="#e5e9e6", lw=.5)
+    fig.tight_layout()
+    save_figure(fig, "fig9_eco_rd_fit")
 
 
 def main() -> None:
     RESULTS.mkdir(parents=True, exist_ok=True)
     data = load_data()
+    print("Fitting Eco-RD on 2019-2023 first-report targets...", flush=True)
+    eco_parameters, eco_tuning = tune_eco_rd(data)
+    MODEL_PARAMETERS["ecoRdFitted"] = {
+        **eco_parameters,
+        **ECO_NUMERICAL_SETTINGS,
+        "fitScope": "selected by mean annual AP on 2019-2023 only; 2024-2025 untouched",
+    }
+    eco_tuning.to_csv(RESULTS / "eco_rd_tuning.csv", index=False)
+    print(f"Selected Eco-RD: {eco_parameters}", flush=True)
     metric_rows, block_rows, activation_rows, prediction_store = [], [], [], {}
     for year in [*DEVELOPMENT_TARGETS, FINAL_TARGET]:
         print(f"Evaluating target year {year}...", flush=True)
-        rows, scores, mask, truth, effort = evaluate_year(data, year)
+        rows, scores, mask, truth, effort = evaluate_year(data, year, eco_parameters)
         metric_rows.extend(rows)
         block_scores = dict(scores)
         block_scores["OG-RDE"] = predict_ogrde_leave_block_out(data, year)
@@ -1040,7 +1210,7 @@ def main() -> None:
     frozen_rows, frozen_block_rows, frozen_predictions = [], [], {}
     for year in FROZEN_TARGETS:
         print(f"Evaluating frozen target year {year}...", flush=True)
-        rows, scores, mask, truth = evaluate_frozen_year(data, year)
+        rows, scores, mask, truth = evaluate_frozen_year(data, year, eco_parameters)
         frozen_rows.extend(rows)
         frozen_block_rows.extend(block_metrics(data, year, scores, mask, truth))
         frozen_predictions[year] = {"scores": scores, "mask": mask, "truth": truth}
@@ -1053,8 +1223,11 @@ def main() -> None:
     summary = bootstrap_summary(development_blocks)
     comparisons = paired_block_comparisons(development_blocks)
     annual_comparisons = annual_paired_comparisons(metrics)
+    eco_comparisons = paired_block_comparisons(development_blocks, reference="Eco-RD")
+    eco_annual_comparisons = annual_paired_comparisons(metrics, reference="Eco-RD")
     frozen_summary = bootstrap_summary(frozen_blocks)
     frozen_comparisons = paired_block_comparisons(frozen_blocks)
+    frozen_eco_comparisons = paired_block_comparisons(frozen_blocks, reference="Eco-RD")
     endpoint = endpoint_comparison(data)
     sensitivity = numerical_sensitivity(data)
     parameter_checks = parameter_sensitivity(data)
@@ -1063,6 +1236,8 @@ def main() -> None:
     summary.to_csv(RESULTS / "bootstrap_summary.csv", index=False)
     comparisons.to_csv(RESULTS / "paired_comparisons.csv", index=False)
     annual_comparisons.to_csv(RESULTS / "annual_paired_comparisons.csv", index=False)
+    eco_comparisons.to_csv(RESULTS / "eco_rd_paired_comparisons.csv", index=False)
+    eco_annual_comparisons.to_csv(RESULTS / "eco_rd_annual_paired_comparisons.csv", index=False)
     endpoint.to_csv(RESULTS / "endpoint_comparison.csv", index=False)
     activation.to_csv(RESULTS / "regional_activation.csv", index=False)
     sensitivity.to_csv(RESULTS / "numerical_sensitivity.csv", index=False)
@@ -1071,6 +1246,7 @@ def main() -> None:
     frozen_blocks.to_csv(RESULTS / "frozen_block_metrics.csv", index=False)
     frozen_summary.to_csv(RESULTS / "frozen_bootstrap_summary.csv", index=False)
     frozen_comparisons.to_csv(RESULTS / "frozen_paired_comparisons.csv", index=False)
+    frozen_eco_comparisons.to_csv(RESULTS / "frozen_eco_rd_paired_comparisons.csv", index=False)
 
     final_metrics = metrics[metrics.year == FINAL_TARGET].sort_values("average_precision", ascending=False)
     manifest = {
@@ -1094,12 +1270,15 @@ def main() -> None:
         "summary": summary.to_dict(orient="records"),
         "pairedComparisons": comparisons.to_dict(orient="records"),
         "annualPairedComparisons": annual_comparisons.to_dict(orient="records"),
+        "ecoRdPairedComparisons": eco_comparisons.to_dict(orient="records"),
+        "ecoRdAnnualPairedComparisons": eco_annual_comparisons.to_dict(orient="records"),
         "matchedEndpointComparison": endpoint.to_dict(orient="records"),
         "numericalSensitivity": sensitivity.to_dict(orient="records"),
         "parameterSensitivity": parameter_checks.to_dict(orient="records"),
         "frozenTemporalMetrics": frozen_metrics.to_dict(orient="records"),
         "frozenBootstrapSummary": frozen_summary.to_dict(orient="records"),
         "frozenPairedComparisons": frozen_comparisons.to_dict(orient="records"),
+        "frozenEcoRdPairedComparisons": frozen_eco_comparisons.to_dict(orient="records"),
     }
     (RESULTS / "study_summary.json").write_text(json.dumps(manifest, indent=2))
     (RESULTS / "data_provenance.json").write_text(json.dumps(data_provenance(data), indent=2))
@@ -1118,7 +1297,7 @@ def main() -> None:
     )
     make_figures(data, metrics, summary, prediction_store, endpoint, sensitivity,
                  frozen_metrics, frozen_summary, frozen_predictions, frozen_blocks)
-    export_frozen_benchmark(frozen_metrics, frozen_summary, frozen_comparisons, frozen_predictions)
+    export_frozen_benchmark(frozen_metrics, frozen_summary, frozen_eco_comparisons, frozen_predictions)
     print("\nTemporal metrics:")
     print(metrics.pivot(index="model", columns="year", values="average_precision").round(3).to_string())
     print("\nSpatial-block bootstrap summary:")

@@ -69,7 +69,7 @@ Verify the committed app and paper artifacts in a clean checkout:
 npm run verify:release
 ```
 
-With the locked scientific inputs available, regenerate the study, run ten research tests, rebuild all eight figures, compile the 11-page paper twice, and require byte-identical PDFs:
+With the locked scientific inputs available, regenerate the study, run the research safeguards, rebuild all nine figures, compile the 13-page paper twice, and require byte-identical PDFs:
 
 ```bash
 research/reproduce.sh

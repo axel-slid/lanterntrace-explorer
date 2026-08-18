@@ -122,6 +122,42 @@ def fetch_host_records() -> list[list[float]]:
     return records
 
 
+def load_host_vegetation(land: np.ndarray) -> tuple[np.ndarray, dict]:
+    """Build a multi-host occurrence proxy with literature-derived weights.
+
+    Each taxon is smoothed and normalized separately so GBIF sample volume does
+    not become a biological weight. Mean first-instar survival days from Nixon
+    et al. (2020; doi:10.1093/ee/nvaa126) provide the relative combination
+    weights. The result remains an occurrence proxy, not vegetation biomass.
+    """
+    target = CACHE / "host-vegetation-ne.json"
+    if not target.exists():
+        raise RuntimeError(
+            f"Missing {target}. Run `node scripts/fetch-host-vegetation.mjs` once, then lock the snapshot."
+        )
+    payload = json.loads(target.read_text())
+    taxa = {int(item["taxonKey"]): item for item in payload["metadata"]["taxa"]}
+    counts = {taxon_key: np.zeros(SHAPE, dtype=float) for taxon_key in taxa}
+    for taxon_key, longitude, latitude, *_ in payload["records"]:
+        taxon_key = int(taxon_key)
+        if taxon_key not in counts:
+            continue
+        x, y = int((float(longitude) - WEST) / STEP), int((float(latitude) - SOUTH) / STEP)
+        if 0 <= x < SHAPE[1] and 0 <= y < SHAPE[0]:
+            counts[taxon_key][y, x] += 1
+
+    weighted = np.zeros(SHAPE, dtype=float)
+    weight_total = 0.0
+    for taxon_key, grid in counts.items():
+        surface = np.log1p(gaussian_filter(grid, 2.2))
+        ceiling = float(np.percentile(surface[land], 98)) if np.any(land) else float(surface.max())
+        surface = np.clip(surface / max(ceiling, 1e-12), 0, 1)
+        weight = float(taxa[taxon_key]["survivalDays"])
+        weighted += weight * surface
+        weight_total += weight
+    return np.clip(weighted / max(weight_total, 1e-12), 0, 1), payload["metadata"]
+
+
 def grid_points(points: list[list[float]]) -> np.ndarray:
     grid = np.zeros(SHAPE, dtype=float)
     for lng, lat, *_ in points:
@@ -191,9 +227,7 @@ def build_covariates() -> dict[str, np.ndarray]:
     elevation = np.where(land, np.maximum(elevation, 0), 0)
     slope = np.hypot(*np.gradient(elevation)) / 220
 
-    host_counts = grid_points(fetch_host_records())
-    host = np.log1p(gaussian_filter(host_counts, 2.2))
-    host = host / max(float(host.max()), 1)
+    host, host_metadata = load_host_vegetation(land)
 
     cities = [
         (-75.16, 39.95, 1.0), (-74.01, 40.71, 1.0), (-77.04, 38.90, .9),
@@ -231,7 +265,7 @@ def build_covariates() -> dict[str, np.ndarray]:
         "land": land.astype(float), "elevation": np.clip(elevation / 1800, 0, 1),
         "slope": np.clip(slope, 0, 1), "host": host, "climate": climate,
         "corridor": corridor, "urban": urban, "elevation_barrier": elevation_barrier,
-        "slope_barrier": slope_barrier,
+        "slope_barrier": slope_barrier, "host_metadata": host_metadata,
     }
 
 

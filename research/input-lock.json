@@ -7,6 +7,10 @@
     "sha256": "f00b6bde366d35c2bb6e0b6177174938fafaa8351a308181c2acec0d07e41238",
     "source": "GBIF taxon 3190653 coordinate cache"
   },
+  ".model-cache/host-vegetation-ne.json": {
+    "sha256": "400c99af0b208e78b17b06c93463a0287641b9b853fefde838dcbfec9a6b277f",
+    "source": "GBIF coordinate snapshot for six spotted-lanternfly host groups; weights from Nixon et al. 2020"
+  },
   ".model-cache/cb_2025_us_state_500k.zip": {
     "sha256": "4295a503ff47e6787adfb520ad6706557e41c2ce57ced5a134087f8e35143a02",
     "source": "U.S. Census 2025 Cartographic Boundary Files"

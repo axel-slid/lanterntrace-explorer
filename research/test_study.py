@@ -52,6 +52,29 @@ class NumericalBoundaryTests(unittest.TestCase):
 
 
 class EndpointTests(unittest.TestCase):
+    def test_eco_parameter_search_is_pre_holdout_and_complete(self):
+        candidate_count = int(np.prod([len(values) for values in study.ECO_PARAMETER_GRID.values()]))
+        self.assertEqual(candidate_count, 972)
+        self.assertTrue(set(study.ECO_TUNING_TARGETS).isdisjoint(study.FROZEN_TARGETS))
+
+    def test_eco_suitability_is_zero_when_a_fitted_limiting_factor_is_zero(self):
+        data = study.load_data()
+        parameters = {
+            "hostFloor": 0.0, "climateFloor": 0.0,
+            "hostPower": 1.0, "climatePower": 1.6,
+        }
+        host = data.cov["host"].copy()
+        climate = data.cov["climate"].copy()
+        try:
+            data.cov["host"] = np.zeros_like(host)
+            self.assertTrue(np.allclose(study.eco_suitability(data, parameters), 0))
+            data.cov["host"] = host
+            data.cov["climate"] = np.zeros_like(climate)
+            self.assertTrue(np.allclose(study.eco_suitability(data, parameters), 0))
+        finally:
+            data.cov["host"] = host
+            data.cov["climate"] = climate
+
     def test_top_fraction_ties_use_lower_cell_index(self):
         labels = np.array([1, 0, 0, 0])
         tied_scores = np.array([1.0, 1.0, 0.0, 0.0])

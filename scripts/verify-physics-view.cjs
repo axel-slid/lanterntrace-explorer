@@ -8,7 +8,7 @@ const context = { window: {} };
 vm.runInNewContext(fs.readFileSync(path.join(root, 'generated/frozen-benchmark.js'), 'utf8'), context);
 
 const benchmark = context.window.LanternTraceBenchmark;
-const modelIds = ['fisher_kpp', 'climate_rd', 'transport_rd', 'full_mechanistic', 'og_rde'];
+const modelIds = ['fisher_kpp', 'climate_rd', 'ruzzier_2025_transfer', 'eco_rd'];
 const { rows, columns } = benchmark.metadata.grid;
 
 for (const year of [2024, 2025]) {
@@ -42,4 +42,4 @@ assert.ok(appSource.includes("embedMode === 'physics' || embedMode === 'hero'"),
 assert.ok(fs.readFileSync(path.join(root, 'styles.css'), 'utf8').includes('.physics-embed .sidebar'), 'Missing focused physics embed layout');
 assert.ok(fs.readFileSync(path.join(root, 'styles.css'), 'utf8').includes('.hero-map-embed .physics-hud'), 'Missing controls-free hero map layout');
 
-console.log('Verified five frozen physics surfaces, local gradient vectors, map layers, and interpretation labeling.');
+console.log('Verified four frozen physics surfaces, local gradient vectors, map layers, and interpretation labeling.');
