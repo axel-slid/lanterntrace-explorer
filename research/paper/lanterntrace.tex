@@ -1,434 +1,301 @@
-\documentclass[9pt]{article}
-\usepackage[letterpaper,top=0.52in,bottom=0.55in,left=0.58in,right=0.58in]{geometry}
-\usepackage{microtype,graphicx,booktabs,tabularx,multicol,amsmath,amssymb,xcolor,hyperref,fancyhdr}
-\usepackage[font=small,labelfont=bf]{caption}
-\definecolor{forest}{HTML}{13795B}
-\definecolor{coral}{HTML}{D95D52}
-\hypersetup{colorlinks=true,linkcolor=forest,citecolor=forest,urlcolor=forest,
-  pdfauthor={Alex Arthur Dils},
-  pdftitle={Climate and Host Vegetation Improve Reaction-Diffusion Forecasting of Spotted Lanternfly First Reports},
-  pdfsubject={A fitted climate-host physics model with frozen first-report validation},
-  pdfkeywords={invasive species, spotted lanternfly, first-report forecasting, reaction-diffusion, temporal validation}}
-\setlength{\columnsep}{0.22in}
-\setlength{\parindent}{0.12in}
-\setlength{\parskip}{1.2pt}
-\setlength{\textfloatsep}{5pt}
-\setlength{\intextsep}{5pt}
-\setlength{\abovecaptionskip}{3pt}
-\setlength{\belowcaptionskip}{1pt}
-\pagestyle{fancy}
-\fancyhf{}
-\fancyhead[L]{\footnotesize SPOTTED LANTERNFLY FIRST-REPORT FORECASTING}
-\fancyhead[R]{\footnotesize RESEARCH ARTICLE · AUGUST 2026}
-\fancyfoot[C]{\thepage}
-\renewcommand{\headrulewidth}{0.3pt}
-\newcommand{\tightsection}[1]{\vspace{2pt}\section*{#1}\vspace{-4pt}}
-\newcommand{\tightsub}[1]{\vspace{2pt}\subsection*{#1}\vspace{-3pt}}
+\documentclass{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{xurl}
+\usepackage{hyperref}
+
+\definecolor{lanterngreen}{HTML}{176B55}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=lanterngreen,
+  citecolor=lanterngreen,
+  urlcolor=lanterngreen,
+  pdftitle={LanternTrace: Reaction--Diffusion Physics for Predicting Spotted Lanternfly Invasion},
+  pdfauthor={Alex Arthur Dils}
+}
+\setlength{\parindent}{0.2in}
+\setlength{\parskip}{3pt}
 \newcommand{\ap}{\operatorname{AP}}
+
+\title{LanternTrace: Reaction--Diffusion Physics for Predicting Spotted Lanternfly Invasion}
+\author{Alex Arthur Dils}
+\date{\today}
+
 \begin{document}
+\maketitle
 
-\begin{center}
-{\LARGE\bfseries Climate and Host Vegetation Improve Reaction--Diffusion Forecasting}\par
-\vspace{4pt}
-{\large A fitted Eco-RD model with frozen spotted-lanternfly first-report validation}\par
-\vspace{7pt}
-{\normalsize Alex Arthur Dils · Independent researcher}\par
-\vspace{3pt}
-{\small Preprint. Results are not peer reviewed.}\par
-{\footnotesize Code, application, and paper: \href{https://github.com/axel-slid/lanterntrace-explorer}{github.com/axel-slid/lanterntrace-explorer}}
-\end{center}
+\begin{abstract}
+\textbf{Rationale:} Understanding the advancing spotted lanternfly invasion front is important because surveillance and control are most useful before a new population becomes widely established. \textbf{Methods:} We developed Eco-RD, a reaction--diffusion model in which local growth and movement depend on climate and edible host vegetation. The model was fitted on 2019--2023 first-report data and frozen before evaluation on 2024 and 2025. \textbf{Results:} Eco-RD achieved mean average precision of 0.493, compared with 0.447 for a transferred Cook-2021 kernel, 0.343 for a transferred Ruzzier-2025 resistance-distance model, and 0.281 for distance alone. A flexible statistical covariate model remained higher at 0.511. \textbf{Conclusion:} Environmental resistance improved the selected published mechanistic baselines on this retrospective first-report task, but the model does not estimate absolute lanternfly abundance and has not yet been prospectively validated. LanternTrace provides a public, interpretable interface for examining these predictions.
+\end{abstract}
 
-\begin{multicols}{2}
-\tightsection{Abstract}
-We developed Eco-RD, a reaction--diffusion model in which both establishment and movement depend on climatic suitability and a multi-host vegetation surface. The host surface combines 21,600 locked GBIF records for tree-of-heaven, grapes, black walnut, silver maple, willow, and red maple; taxon weights are published mean first-instar survival days rather than arbitrary display coefficients. Six Eco-RD parameters were selected by an exhaustive 972-candidate grid search using only 2019--2023 first-report targets. We then froze the specification and evaluated 2024--2025 first reports among previously unreported $0.2^\circ$ U.S. land cells. Eco-RD achieved average precision (AP) 0.490 and 0.496, averaging 0.493. This was 10.4\% higher than the transferred Cook-2021 kernel (0.447 mean AP), 43.6\% higher than a transferred Ruzzier-2025 resistance-distance form (0.343), and 75.1\% higher than distance alone (0.281). The direction of each annual difference was consistent across both untouched years. Geographic block intervals were wider and did not resolve Eco-RD from Cook or Ruzzier, and a study-built statistical covariate hazard remained higher at 0.511 mean AP. Eco-RD therefore improves this study's transferred published mechanistic comparators, not every possible model. The outcome is a transparent fitted physics model and a reproducible benchmark, not evidence of calibrated abundance or universal state-of-the-art dominance.
+\section{Introduction}
 
-\tightsection{Introduction}
-Biological invasions force surveillance programs to decide where to look before the next arrival is known. Public occurrence maps appear to supply both the history and the answer, but they record discovery as well as spread. Once a cell is reported, it remains colored on every later map. The benchmark therefore never forgets, and a method can earn a high score by preserving known cells without locating a single new report.
+\textbf{The spotted lanternfly invasion creates a measurable agricultural and economic burden.} The insect was first detected in the United States in Berks County, Pennsylvania, in 2014, and by August 2025 some degree of infestation had been reported in 19 states and the District of Columbia---an expansion of hundreds of miles in little more than a decade \cite{usda2025}. A Penn State economic study estimated \$50.1 million in annual total economic damage in the then-current southeastern Pennsylvania quarantine zone, including \$13.1 million in direct agricultural losses. The same study projected \$324.9 million in annual statewide losses under expected damage and \$554.0 million under its worst-case scenario \cite{harper2019}. These are Pennsylvania scenario estimates, not measured national crop losses.
 
-Spotted lanternfly (\textit{Lycorma delicatula}) makes this gap consequential. Its spread mixes short-range biological dispersal with long-distance human transport, inviting reaction--diffusion models with nonlocal jumps, habitat suitability, and barriers. Yet the public record is densest where people look, and an unreported cell is neither a verified absence nor necessarily uninvaded. The same cumulative data that motivate a mechanistic forecast can therefore make it deceptively easy to validate.
+\textbf{Tracking the invasion front allows limited surveillance and management resources to be directed toward places where new reports are most likely.} A cumulative occurrence map shows everywhere the insect has ever been reported, but it does not directly answer where the next report will occur. That distinction matters because a prediction method can look accurate simply by assigning high risk to already established areas. We therefore define the outcome as a first report in a previously unreported grid cell.
 
-That leaves a practical modeling question: can climate and the vegetation actually eaten by spotted lanternfly improve a physical spread model once known cells are removed from the target? We therefore fit one explicit model, Eco-RD, before 2024 and compare it with two transferred published approaches, classical and factor-isolated reaction--diffusion, distance alone, and a flexible statistical control. Our endpoint is deliberately operational: among cells not previously reported, which will be reported first next year? It still combines invasion with observation, but it cannot be solved by copying the past.
-\end{multicols}
+\textbf{Climate, edible vegetation, local dispersal, wind, and human transport can all influence spotted lanternfly spread.} Temperature and moisture affect establishment and phenology \cite{wakie2020,barker2025}; tree-of-heaven, grape, walnut, maple, and willow provide hosts of differing quality \cite{nixon2020}; and human-assisted movement produces long-distance jumps that local diffusion cannot explain \cite{ladin2023}. Wind may affect short-range movement, but the frozen benchmark in this paper isolates the two environmental surfaces that were available consistently across the domain: climate and host vegetation. The application's wind display is an exploratory sensitivity layer, not part of the fitted performance claim.
 
-\clearpage
-\begin{multicols}{2}
-\tightsub{Human-mediated invasion dynamics}
-Empirical and simulation work already establishes that human transport is central to spotted lanternfly spread. Ladin et al. found that models without hitchhiking reproduced only 33\% of observed county invasions, while transportation-linked processes explained long-distance spread \cite{ladin2023}. A later mechanistic-statistical framework jointly represented a complex life cycle, local dispersal, and transportation-network movement, emphasizing the need to account for presence-only sampling bias \cite{mechanistic2025}. Human-activity simulations likewise identify roads and movement as important accelerants \cite{human2024}.
+\textbf{Previous spread models are informative but often emphasize distance, broad suitability, or transportation separately.} Cook and colleagues modeled invasion hazard using spatial proximity and population \cite{cook2021}. Ruzzier and colleagues combined climatic and host suitability with resistance distance and a published annual dispersal scale \cite{ruzzier2025}. PoPS incorporates local kernels and long-distance transportation processes \cite{jones2022}. These approaches establish strong precedents, but transferring any published model to a new grid, observation source, and prediction endpoint can change its performance.
 
-Closest forecasting precedents include a Cox invasion-hazard analysis of proximity and population \cite{cook2021} and a calibrated PoPS process model with short-range kernels and rail-mediated jumps \cite{jones2022}. Our contribution is not a reproduction of PoPS: it is the matched cumulative-versus-first-report audit and comparison of lightweight hypotheses under one executable endpoint.
+\textbf{Here we present a mechanistic model and a machine-learning alternative that learn from known drivers without treating the observed range as the answer.} Eco-RD solves a reaction--diffusion update in which climate and edible host vegetation jointly control both establishment and resistance to movement. In parallel, OG-RDE fits a regularized statistical hazard using multiscale frontier, environmental, geographic, and simulated-physics features. The mechanistic model is intended to remain interpretable at the level of a single cell; the learned model asks how much predictive signal remains when those assumptions are relaxed.
 
-Habitat models add a complementary question: where establishment is plausible once propagules arrive. MaxEnt analyses have mapped climatic establishment risk \cite{wakie2020}, and real-time phenology products connect thermal accumulation to stage-specific activity \cite{phenology2025}. These are valuable covariates but do not by themselves identify an invasion arrival process.
+\textbf{We evaluate the models on held-out 2024--2025 first reports and make the results publicly inspectable.} Model parameters were selected using only 2019--2023 outcomes and then frozen. The 2026 records are incomplete and are therefore reported only as interim monitoring, not as a complete holdout. The interactive application is available at \href{https://www.alex-dils.com/lanterntrace/app/}{alex-dils.com/lanterntrace/app}.
 
-Our work does not replace those domain models. It asks how lightweight hypotheses behave on a common endpoint that removes direct persistence credit.
+\section{Methods}
 
-\tightsub{Presence-only observation bias}
-Presence-only records confound ecological state with detection and reporting. Dorazio showed that ignored observation error can distort inference from opportunistic data \cite{dorazio2014}. Survey-background matching and targeted background selection can reduce bias when survey structure is available \cite{phillips2009}, but spatial thinning alone need not improve predictive accuracy \cite{thinning2023}. Independent presence--absence data remain the strongest validation route \cite{independent2020}.
+\subsection{Occurrence data}
 
-Spatial cross-validation is also essential. Randomly intermingled train and test points share autocorrelation and inflate apparent transferability; spatial sorting bias can make discrimination metrics optimistic \cite{hijmans2012}. Presence-only benchmarking studies therefore recommend evaluation across data regimes and spatial partitions rather than reliance on a single random split \cite{valavi2022}. Accordingly, this study combines a matched cumulative-versus-first-report audit, annual and spatial validation, a post-hoc pre-2024 coefficient freeze, comparisons with published and covariate baselines, numerical sensitivity checks, and a reproducible audit trail.
+\textbf{Spotted lanternfly occurrence records were obtained from a locked GBIF snapshot rather than directly from iNaturalist.} The snapshot, retrieved on August 2, 2026, contains 62,791 public-coordinate records; 57,999 dated records fall inside the United States analysis mask \cite{gbif}. GBIF aggregates multiple publishers and citizen-science sources, which preserves a reproducible record key and source trail. The records collapse to 2,484 unique cell-years and 675 unique first-report cells. Because these are opportunistic reports, an unreported cell is a pseudo-absence: it can be uninvaded, invaded but undetected, or detected but not yet published.
 
-\tightsection{Methods}
-\tightsub{Data and study domain}
-The source bundle is a GBIF API snapshot retrieved 2 August 2026 \cite{gbif}: 62,791 public-coordinate records, of which 62,788 have event years 2014--2026, 60,142 fall inside the rectangular domain, and 57,999 fall inside the 2025 Census state mask \cite{census}. These collapse to 2,484 unique cell-years and 675 first-report cells. Coordinates are aggregated to a $50\times70$, $0.2^\circ$ grid covering $37$--$47^\circ$N and $82$--$68^\circ$W; only 1,652 cell centers are eligible United States land. At the midpoint, cells are approximately $22$ km north--south by $16$ km east--west.
+\subsection{Adding cells to the map}
 
-The first-report year $T_i$ is the earliest dated record in cell $i$. The cumulative display state is $O_{i,t}=\mathbb{1}(T_i\le t)$, but the forecast label is
-\[
-y_{i,t}=\mathbb{1}(T_i=t),\qquad i\in\mathcal{E}_{t}=\{i:O_{i,t-1}=0,\ L_i=1\},
-\]
-where $L_i$ is the Census-constrained land mask. Thus every candidate is unreported at the origin. The complete-year folds contain 109, 109, 110, and 139 positive cells in 2022--2025 among 1,468 to 1,140 candidates. The interim 2026 slice contains 24 positives among 1,001 candidates.
+\textbf{The map divides the northeastern United States into a fixed $0.2^\circ$ grid.} The $50\times70$ domain spans $37$--$47^\circ$N and $82$--$68^\circ$W. A 2025 U.S. Census state boundary mask leaves 1,652 eligible land cells; at the center of the domain, one cell is approximately 22 km north--south by 16 km east--west. Cells whose centers fall outside the U.S. land mask are excluded from fitting and evaluation. For each eligible cell $i$, the first-report year $T_i$ is the earliest dated occurrence. The target for year $t$ is
+\begin{equation}
+  y_{i,t}=\mathbb{1}(T_i=t), \qquad
+  i\in\mathcal{E}_t=\{i:T_i\geq t,\ L_i=1\},
+\end{equation}
+where $L_i$ is the land mask. Thus, every candidate was unreported at the forecast origin.
 
-Climate uses WorldClim 2 BIO1, BIO3, BIO9, and BIO19 surfaces \cite{worldclim,wakie2020}. Host vegetation comes from a locked GBIF snapshot of 21,600 public-coordinate records: 3,600 each for tree-of-heaven, \textit{Vitis}, black walnut, silver maple, \textit{Salix}, and red maple. Each taxon is gridded, Gaussian-smoothed, log transformed, and normalized independently at its land-cell 98th percentile, preventing taxa with more GBIF records from automatically receiving more biological weight. Taxon surfaces are then averaged using controlled-experiment mean first-instar survival days \cite{nixon2020}. This is a host-availability proxy, not remotely sensed biomass.
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{../figures/fig1_endpoint_and_map.pdf}
+  \caption{Study endpoint and analysis grid. Left, cumulative reported cells compared with the smaller first-report endpoint. Right, the frozen 2025 Eco-RD risk surface, new reports, U.S. boundaries, and masked cells. The modeled field is relative risk, not abundance.}
+  \label{fig:endpoint}
+\end{figure}
 
-\tightsub{Data semantics}
-``First reported'' is not ``first occupied.'' Date quality, duplicate reporting, changes in public awareness, institutional surveillance, and local verification policies all affect $T_i$. We treat the task as a joint ecological-surveillance forecast and avoid abundance or calibrated occupancy claims.
-\end{multicols}
+\subsection{Population standardization}
 
-\clearpage
-\begin{multicols}{2}
-\tightsub{Candidate models and reaction--diffusion fields}
-Let $u_i^n\in[0,1]$ denote relative pressure at cell $i$ and monthly step $n$, initialized from the smoothed event-date range. The implemented finite-volume diffusion term is
-\[
-F_i^n={D_0\over4}\sum_{j\in N(i)}{2k_ik_j\over k_i+k_j}\left({20\mathrm{\ km}\over d_{ij}}\right)^2(u_j^n-u_i^n),
-\]
-and the explicit update is $u_i^{n+1}=\Pi_L[u_i^n+\Delta t\{F_i^n+r_i^nu_i^n(1-u_i^n)+J_i^n+A_i^n\}]$. Here $d_{ij}$ uses latitude-specific spacing, $k$ is optional conductivity, $J$ is Gaussian satellite pressure, and $A$ is directional transport. Harmonic face conductivity makes the zero-conductivity land-mask interface impermeable; rectangular edges use zero-normal-gradient neighbors. Complete years use $\Delta t=1$ month for 12 steps.
+\textbf{Population standardization is used to make the observed-report display less sensitive to where more people are available to report insects.} For the interactive observed layer, cumulative reports in a cell are converted to reports per 100,000 residents and stabilized toward the national rate with an empirical-Bayes population prior. Neighboring cells are then smoothed to reduce visually abrupt sampling gaps. This display should be interpreted as a relative population-adjusted reporting signal. Population normalization is deliberately \emph{not} applied to the first-report labels or to the Eco-RD state, because dividing the binary outcome by population would change the forecast question and could make sparsely populated cells artificially extreme.
 
-We compare Fisher--KPP, climate RD, transport RD, and a full mechanistic variant. A distance kernel and reporting surface are simple baselines. A stronger covariate hazard uses multiscale frontier, host, climate, terrain, and coordinate predictors but excludes simulated risk fields. It tests whether the fitted physics adds information beyond flexible retrospective geography.
+\subsection{Climate and host vegetation}
 
-\tightsub{Historical literature comparator}
-Cook et al. estimated an SLF-specific annual kernel $p_{ij}=\exp(-0.045d_{ij})$ and spatial proximity $1-\prod_j(1-p_{ij})$ between uninvaded and previously invaded county centroids \cite{cook2021}. We evaluate those published equations on our event-date histories, replacing county centroids with reported $0.2^\circ$ cell centers and changing no fitted coefficient. We call this fixed comparator \emph{Cook-2021 kernel}. It is a scale transfer on a common endpoint, not a replication of their structured county survey, persistence definition, or Census-population Cox model.
+\textbf{Climate suitability combines temperature and moisture variables associated with spotted lanternfly establishment.} The surface uses WorldClim 2 BIO1, BIO3, BIO9, and BIO19 variables \cite{worldclim}, selected to represent annual temperature, temperature evenness, dry-quarter temperature, and cold-quarter precipitation in line with published establishment analyses \cite{wakie2020}. The resulting score $C_i\in[0,1]$ is a relative suitability index.
 
-Ruzzier et al. combined climate and host suitability with resistance distance, a logistic resistance transform ($k=15,x_0=0.5$), and a 25.418-km 99th-percentile annual dispersal distance \cite{ruzzier2025}. We transfer those published values to the present climate--host surface, define $S_R=(C+V)/2$, calculate $R_i=[1+\exp\{-15(1-S_{R,i}-0.5)\}]^{-1}$, and rank cells by $\exp(-d_R/25.418)$. Because raster scale and covariate construction differ, \emph{Ruzzier-2025 transfer} is a published-form comparator, not a numerical replication.
+\textbf{Vegetation suitability represents plants that spotted lanternflies can eat rather than generic greenness.} We assembled a locked GBIF host snapshot containing 3,600 public-coordinate records for each of six host groups: tree-of-heaven, \textit{Vitis} species, black walnut, silver maple, \textit{Salix} species, and red maple. Each taxon was gridded, smoothed, log transformed, and normalized independently before combination. The combination weights are controlled-experiment mean first-instar survival days reported by Nixon and colleagues \cite{nixon2020}. The resulting score $V_i\in[0,1]$ is a host-availability proxy, not a remotely sensed biomass measurement.
 
-\tightsub{Eco-RD: fitted climate--host physics}
-Eco-RD makes the limiting environmental factors explicit:
-\[
-\begin{aligned}
-S_i&=\sqrt{[f_V+(1-f_V)V_i]^{p_V}[f_C+(1-f_C)C_i]^{p_C}},\\
-k_i&=L_i(0.08+0.92S_i).
-\end{aligned}
-\]
-Here $V_i$ is host vegetation, $C_i$ is climate suitability, and the geometric mean prevents a favorable factor from fully replacing an unfavorable one. The monthly update is
-\[
-u_i^{n+1}=\Pi_{[0,1]}\!\left[u_i^n+D\,\nabla_h\!\cdot(k\nabla_hu^n)
- rS_i u_i^n(1-u_i^n)\right].
-\]
-The state $u$ is relative establishment pressure, not a lanternfly count. Land-majority cells exchange pressure through harmonic-mean face conductivity; water-majority cells have zero conductivity. The fixed 0.08 conductivity floor avoids declaring a sampled but low-suitability land cell physically impassable.
-
-We evaluate all $4\times3\times3\times3\times3\times3=972$ combinations of $D\in\{.08,.13,.19,.28\}$, $r\in\{.06,.13,.24\}$ month$^{-1}$, $f_V,f_C\in\{0,.15,.35\}$, and $p_V,p_C\in\{.6,1,1.6\}$. Selection maximizes macro mean annual AP across 2019--2023, breaking ties by worst-year AP. No 2024 or 2025 label enters this search.
-
-\tightsub{OG-RDE hazard}
-OG-RDE learns a regularized hazard over eligible cells. Predictors include four Gaussian neighborhood scales, distance to the event-date front, static host and climate suitability, elevation and slope barriers, coordinates, and Fisher--KPP and climate-RD risk fields. The primary model excludes the weak recurrence-based reporting feature; adding it is an ablation.
-
-For target year $t$, training stacks all cell-year examples from 2018 through $t-1$. Features are standardized within the pipeline and a logistic model estimates
-\[
-\Pr(y_{i,t}=1\mid\mathbf{z}_{i,t})=\sigma(\beta_0+\boldsymbol\beta^\top\mathbf{z}_{i,t}),
-\]
-\vfill\null\columnbreak
-With $L_2$ regularization ($C=0.08$), the large pseudo-negative class is prevented from swamping first reports by assigning positives weight
-\[
-w_+=\min\!\left(12,\sqrt{n_-/\max(n_+,1)}\right).
-\]
-No target-year outcome enters training, scaling, or model fitting. Because unreported cells are pseudo-absences, scores are interpreted as rankings rather than calibrated probabilities.
-
-\tightsub{Reporting surface}
-The nuisance model predicts whether a previously reported cell is reported again using prior count, static covariates, and trend. Its output $q_{i,t}$ is clipped to $[0.08,0.96]$. Because recurrence is not search effort in unoccupied cells, $q$ is a standalone baseline and optional feature, never an inverse-probability weight.
-
-\tightsub{Ablations}
-``+ reporting'' adds $q_{i,t}$. ``+ transport'' adds schematic corridor/urban predictors and transport/full-physics risks, then averages hazard and transport percentile ranks. This bundled addition is labeled exploratory; it is not an atomic causal ablation.
-
-\tightsub{Forecast endpoint and matched cumulative audit}
-A cumulative endpoint rewards reconstruction of the observed range as well as prediction of its advance. For example, if 900 of 1,000 cells known at the forecast origin remain positive and 50 new cells appear, a persistence-only predictor obtains 900 true positives without ranking any frontier cell. Recall or $F_1$ on cumulative occupancy is consequently dominated by reconstruction, and threshold selection on the same arrivals adds further optimism. The primary endpoint therefore excludes every cell reported by the forecast origin and evaluates new first reports against the remaining never-reported candidates. A matched audit applies the same Transport-RD predictions and AP metric to cumulative and first-report targets so that the contribution of endpoint definition can be measured directly.
-\end{multicols}
-
-\begin{center}\scriptsize
-\begin{tabular}{llll}
-\toprule
-Quantity & Value & Status & Source / role \\
-\midrule
-Tree-of-heaven / grape survival & 72.5 / 63.9 d & empirical weight & Nixon et al. \cite{nixon2020} \\
-Black walnut / silver maple & 62.9 / 58.0 d & empirical weight & Nixon et al. \cite{nixon2020} \\
-Willow / red maple & 47.0 / 22.2 d & empirical weight & Nixon et al. \cite{nixon2020} \\
-Cook decay $\alpha$ & .045 km$^{-1}$ & published & Cook et al. \cite{cook2021} \\
-Ruzzier distance / $k$ / $x_0$ & 25.418 km / 15 / .5 & published & Ruzzier et al. \cite{ruzzier2025} \\
-Eco-RD $D$ / $r$ & .28 / .24 month$^{-1}$ & pre-2024 fitted & 972-candidate search \\
-Eco-RD $f_V$ / $f_C$ & 0 / 0 & pre-2024 fitted & no artificial suitability floor \\
-Eco-RD $p_V$ / $p_C$ & 1.0 / 1.6 & pre-2024 fitted & stronger climate penalty \\
-Conductivity floor & .08 & numerical regularizer & prevents false hard land barriers \\
-Initial smoothing & $\sigma=.8$, weight .74 & numerical regularizer & fixed before replay \\
-Domain / time step & $0.2^\circ$ / 1 month & numerical design & Census mask; step sensitivity checked \\
-\bottomrule
-\end{tabular}
-\parbox{.93\linewidth}{\footnotesize\textbf{Table 1.} Every biological or transferred-literature constant is cited. Values labeled fitted are estimates from the declared pre-2024 search, not literature constants; numerical regularizers are disclosed rather than given false biological citations.}
-\end{center}
-
-\clearpage
-\begin{multicols}{2}
-\tightsub{Evaluation protocol}
-\tightsub{Rolling origins}
-For each target $t\in\{2022,2023,2024,2025\}$, histories use event dates through $t-1$ and learned models fit earlier transitions. This prevents direct target-label fitting, but it is not a historical availability-time forecast: the single 2026 snapshot can include records uploaded or corrected after an earlier origin, and the host surface is a static contemporary sample. We therefore call every fold an \emph{event-date retrospective pseudo-forecast}. January--July 2026 is descriptive interim monitoring, not a preregistered holdout.
-
-The protocol prevents target-event dates from entering initial conditions, removes already reported cells, and avoids target-year display thresholds. It cannot reconstruct what a real analyst knew on each historical date. The application's assimilating playback is not a benchmark source.
-
-\tightsub{Ranking metrics}
-Average precision is primary because positives make up only 4.7--6.9\% of candidates in complete-year folds. It summarizes precision across recall thresholds:
-\[
-\ap=\sum_k (R_k-R_{k-1})P_k.
-\]
-We also report recall among the top 5\% of cells, corresponding to a constrained survey budget. Scores are quantized to 12 decimal places and boundary ties use ascending flattened cell index as a fixed secondary key; the same deterministic allocation is used for metrics, maps, and the application. For endpoint comparisons with prevalence $\pi$, normalized AP lift is $(\ap-\pi)/(1-\pi)$. ROC AUC is computed in artifacts but is secondary because the many easy pseudo-negatives can obscure frontier ranking. We do not compare uncalibrated risk fields by log loss or claim probabilistic calibration.
-
-\tightsub{Spatial generalization}
-The domain is partitioned into fixed $2^\circ\times2^\circ$ blocks. Every learned variant---OG-RDE, both additions, the covariate hazard, and reporting surface---is refit after excluding the target block's earlier cell-year examples; origin-time state fields remain available because the task is next-year prioritization in monitored regions, not de novo transfer. Physics comparators have no fitted coefficients. Within-block AP uses 59 block-years containing both classes across 20 unique blocks. Separately, a block-activation AP includes all 21--23 candidate blocks and asks whether each contains any first report.
-
-We sample the 20 unique geographic blocks 2,500 times, retaining every repeated year within a sampled block. Paired differences preserve common block difficulty. A separate four-year bootstrap reports macro-annual AP differences; its resolution is necessarily poor. Intervals crossing zero are inconclusive, not evidence of equivalence.
-
-\tightsub{Model-selection firewall}
-Eco-RD is selected exclusively on 2019--2023 targets. The six-dimensional candidate grid, objective, tie rule, host weighting, climate construction, numerical regularizers, and top-5\% survey budget are then frozen. For 2024 and 2025, only the event-date range is updated before the annual prediction. Learned controls are likewise fit only through 2023 and reused unchanged.
-
-This is a \emph{post-hoc frozen temporal replay}, not a preregistered lockbox. The authors had access to the full 2026 snapshot while designing the analysis, and later uploads may populate earlier event years. It strengthens temporal separation but does not create analyst blinding, independent-species transfer, or prospective field validation.
-
-\tightsub{Reproducibility and audit controls}
-Seed 73,491 controls stochastic components. The build emits the complete 972-row Eco-RD search, rolling and frozen annual, block, activation, endpoint-audit, sensitivity, and paired-comparison tables; prediction arrays; nine figures; a configuration manifest; dependency lock; 57,999 included occurrence records with GBIF keys; and SHA-256 hashes for occurrence, host, Census, WorldClim, solver, and study inputs. Tests cover coefficient freezing, deterministic survey-budget ties, published kernels, bootstrap invariance, no-flux boundaries, non-wraparound, endpoint exclusion, land eligibility, and provenance.
-
-The analysis is implemented in the repository script \texttt{run\_sota\_study.py}; source code and artifacts are available from the \href{https://github.com/axel-slid/lanterntrace-explorer}{project repository}. The accompanying artifacts include annual and per-block metrics, paired uncertainty estimates, parameter and checksum manifests, included occurrence keys, model predictions, figures, tests, a dependency lock, the application, and this manuscript. The \texttt{reproduce.sh} script reruns the tests and analysis, compiles the manuscript, validates its page count, checks a byte-identical rebuild, and hashes the PDF. The source snapshot is checksum-locked locally; a permanent archive DOI and GBIF derived-dataset DOI remain release tasks.
-
-\tightsub{Interpretation criteria}
-Evidence for a useful model requires performance above the distance baseline on rolling folds and robustness across annual and spatial views. Evidence for dominance over a mechanistic comparator requires a paired interval excluding zero. The complete workflow proceeds from the 2026 snapshot to event-date origins and Census-eligible unreported cells, followed by the matched endpoint audit, exploratory rolling fits, the pre-2024 coefficient freeze, annual state updates without coefficient changes, and annual, spatial, survey-yield, numerical, and model-agreement diagnostics. By the stated criteria, the experiment supports utility but not universal dominance.
-\end{multicols}
-
-\begin{multicols}{2}
-\tightsection{Results}
-\tightsub{Annual skill and geographic robustness}
-\end{multicols}
-\noindent\includegraphics[width=\linewidth]{../figures/fig1_endpoint_and_map.pdf}
-\vspace{-5pt}
-\begin{multicols}{2}
-\noindent\textbf{Figure 1.} \textbf{Left:} cumulative reported cells and the smaller first-report endpoint. Shading marks development and interim 2026. \textbf{Right:} 2025 Eco-RD risk, first reports, Census state outlines, and masked non-U.S./water cells. Risk is relative.
-
-\tightsub{Exploratory annual ranking}
-Across the 2022--2025 complete-year folds, Eco-RD has the highest macro mean AP, 0.523 (SD 0.035), followed by the covariate hazard at 0.522 and OG-RDE at 0.521. Cook-2021 scores 0.490 and the Ruzzier-2025 transfer 0.357. Because 2022--2023 contributed to Eco-RD selection and 2024--2025 are the only untouched targets, this four-year ranking is descriptive; the frozen replay below is primary.
-
-\begin{center}
+\begin{table}[htbp]
+\centering
+\caption{Model quantities, values, and evidential status. Biological and transferred-model constants are linked to literature; fitted and numerical terms are labeled separately.}
+\label{tab:parameters}
 \small
-\begin{tabular}{lrrr}
+\begin{tabularx}{\textwidth}{@{}l l X@{}}
 \toprule
-Model & Mean AP & SD & R@5\% \\
+Quantity & Value & Basis and interpretation \\
 \midrule
-Eco-RD & .523 & .035 & .353 \\
-Covariate hazard & .522 & .021 & .347 \\
-OG-RDE & .521 & .020 & .344 \\
-OG-RDE + transport & .520 & .013 & .345 \\
-Climate RD & .509 & .040 & .338 \\
-Transport RD & .508 & .034 & .343 \\
-Fisher--KPP & .501 & .037 & .333 \\
-Full mechanistic & .491 & .042 & .350 \\
-Cook-2021 kernel & .490 & .051 & .326 \\
-Ruzzier-2025 transfer & .357 & .044 & .230 \\
-Distance kernel & .296 & .019 & .254 \\
+Tree-of-heaven survival & 72.5 d & Experimental host weight \cite{nixon2020} \\
+Wild grape survival & 63.9 d & Experimental host weight \cite{nixon2020} \\
+Black walnut survival & 62.9 d & Experimental host weight \cite{nixon2020} \\
+Silver maple survival & 58.0 d & Experimental host weight \cite{nixon2020} \\
+Willow survival & 47.0 d & Experimental host weight \cite{nixon2020} \\
+Red maple survival & 22.2 d & Experimental host weight \cite{nixon2020} \\
+Cook distance decay & 0.045 km$^{-1}$ & Published county-scale kernel \cite{cook2021} \\
+Ruzzier annual distance & 25.418 km & Published 99th-percentile dispersal scale \cite{ruzzier2025} \\
+Ruzzier resistance $k,x_0$ & 15, 0.5 & Published logistic resistance transform \cite{ruzzier2025} \\
+Eco-RD diffusion $D$ & 0.28 month$^{-1}$ & Selected on 2019--2023 first reports \\
+Eco-RD growth $r$ & 0.24 month$^{-1}$ & Selected on 2019--2023 first reports \\
+Host/climate powers & 1.0, 1.6 & Selected on 2019--2023 first reports \\
+Minimum conductivity & 0.08 & Numerical floor; prevents false hard barriers \\
+Grid and time step & $0.2^\circ$, 1 month & Numerical design; not a biological constant \\
 \bottomrule
-\end{tabular}
-\end{center}
-\noindent\textbf{Table 2.} Macro mean over target years 2022--2025. R@5\% is recall within the highest-risk 5\% of eligible cells.
+\end{tabularx}
+\end{table}
 
-\tightsub{Spatial blocks}
-Matched endpoint evaluation shows Transport RD at 0.896--0.952 cumulative AP versus 0.478--0.545 frontier AP; cumulative and frontier prevalence are 0.177--0.394 and 0.074--0.122. Persistence alone scores 0.694--0.871 cumulative AP, directly quantifying known-cell credit. Under block evaluation, Eco-RD averages 0.500 (95\% geographic-bootstrap interval 0.405--0.587), Cook-2021 0.497 (0.395--0.594), and Ruzzier-2025 0.487 (0.396--0.573). Wide overlap motivates the untouched temporal comparison.
-\end{multicols}
-\vspace{1pt}
-\begin{center}
-\includegraphics[width=.68\linewidth]{../figures/fig2_benchmark.pdf}
-\vspace{-4pt}
+\subsection{Resistance in a single cell}
 
-\parbox{.78\linewidth}{\footnotesize\textbf{Figure 2.} \textbf{Left:} identical-model, identical-metric endpoint audit. \textbf{Right:} within-block robustness with 2,500 geographic-block bootstrap intervals; learned models use held-block refits.}
-\end{center}
+\textbf{A cell's resistance is the inverse of how easily invasion pressure can move through its climate--vegetation environment.} First, the two environmental scores are combined as
+\begin{equation}
+S_i=\sqrt{
+  [f_V+(1-f_V)V_i]^{p_V}
+  [f_C+(1-f_C)C_i]^{p_C}},
+\end{equation}
+where $S_i$ is establishment suitability, $f_V$ and $f_C$ are optional floors, and $p_V$ and $p_C$ control how strongly intermediate vegetation and climate values are penalized. The geometric mean requires both factors to be favorable: good vegetation cannot fully compensate for unsuitable climate, and favorable climate cannot compensate for the absence of hosts.
 
-\begin{multicols}{2}
-\tightsub{Diagnostics, ablations, and interim monitoring}
-\end{multicols}
-\noindent\includegraphics[width=\linewidth]{../figures/fig3_temporal_performance.pdf}
-\vspace{-6pt}
-\begin{multicols}{2}
-\noindent\textbf{Figure 3.} Annual ranking and top-5\% capture. The dashed line separates complete-year development folds from interim 2026 monitoring. Comparing their absolute levels requires caution.
+\textbf{Suitability becomes movement conductivity through $k_i=L_i(0.08+0.92S_i)$ and resistance through $R_i=1/k_i$.} An ideal land cell has $S_i=1$, $k_i=1$, and $R_i=1$. A very poor land cell approaches $k_i=0.08$ and $R_i=12.5$, meaning that movement is much slower but not declared impossible. A masked water or non-U.S. cell has $L_i=0$ and cannot carry pressure. Across an edge, the model uses the harmonic mean of the two conductivities, so one highly resistant cell slows exchange in both directions.
 
-\tightsub{Temporal heterogeneity}
-No model leads every year. Eco-RD leads 2022 (0.551) and 2023 (0.556), OG-RDE + transport leads 2024 (0.503), and the covariate hazard leads 2025 (0.544). Four folds are too few for a precise variance comparison.
+\subsection{Reaction--diffusion model}
 
-At a fixed top-5\% budget, leading complete-year recall is 0.33--0.36. All-block activation AP averages 0.952--0.958 for leading models, showing that broad active-region identification is easier than ordering cells within active blocks. Neither number estimates field detection probability.
+\textbf{Eco-RD updates relative invasion pressure through environment-dependent diffusion and logistic establishment.} Let $u_i^n\in[0,1]$ be the relative pressure in cell $i$ at monthly step $n$. The discrete update is
+\begin{equation}
+u_i^{n+1}=\Pi_{[0,1]}\left[
+u_i^n+D\,\nabla_h\!\cdot(k\nabla_h u^n)_i
++rS_i u_i^n(1-u_i^n)
+\right].
+\end{equation}
+The first term preserves the existing state. The second spreads pressure between neighboring cells, slowed by conductivity $k$. The third allows local establishment, scaled by suitability $S_i$, with logistic saturation preventing unbounded growth. The projection $\Pi_{[0,1]}$ keeps the numerical state within its declared range. The state $u_i$ is a ranking signal; it is not an estimated number of insects.
 
-\tightsub{Selected environmental response}
-The pre-2024 optimum is $D=.28$, $r=.24$, $f_V=f_C=0$, $p_V=1.0$, and $p_C=1.6$. Zero floors mean unsuitable cells are not granted artificial establishment quality; the higher climate exponent makes middling climate more restrictive than the host surface. These are predictive parameters for this grid and state variable, not physiological estimates.
+\textbf{Smaller visual cells do not create new ecological evidence.} The scientific benchmark is solved at the fixed $0.2^\circ$ resolution so every model is compared on the same support. The application may subdivide or interpolate cells for smoother viewing, but those subcells inherit the parent solution unless the inputs and PDE are refitted at the finer grid. A genuine higher-resolution physics study would require higher-resolution host, climate, occurrence, and population inputs together with a new convergence analysis.
 
-\tightsub{Why the fitted model is interpretable}
-For one cell, $S_i$ answers whether climate and edible vegetation jointly permit establishment. Conductivity $k_i=.08+.92S_i$ converts suitability into movement resistance, $R_i=1/k_i$: an ideal cell has $R=1$, whereas a poor cell approaches $R=12.5$. The harmonic mean across a cell edge means movement is slowed by the more resistant side. Growth is separately multiplied by $S_i$, so a poor cell both receives pressure slowly and establishes it slowly.
+\subsection{Parameter fitting and comparison models}
 
-\tightsub{Interim 2026 slice}
-Only 24 first-report cells occur through July. Transport RD ranks first (0.202), followed by full mechanistic (0.195), the covariate hazard (0.173), Fisher--KPP (0.172), and Eco-RD (0.169). This partial, post-outcome slice is not external validation.
-\end{multicols}
-\vspace{1pt}
-\begin{center}
-\includegraphics[width=.78\linewidth]{../figures/fig9_eco_rd_fit.pdf}
-\vspace{-4pt}
+\textbf{Eco-RD parameters were selected before the holdout period by exhaustive search.} We evaluated 972 combinations of diffusion, growth, environmental floors, and environmental powers. Selection maximized mean annual average precision on 2019--2023 first-report targets, with worst-year performance as the tie breaker. The selected values were $D=0.28$, $r=0.24$, $f_V=f_C=0$, $p_V=1.0$, and $p_C=1.6$. No 2024 or 2025 label entered the search.
 
-\parbox{.84\linewidth}{\small\textbf{Figure 4.} \textbf{Left:} pre-2024 parameter search, showing the best host/climate settings at each diffusion--growth pair. \textbf{Right:} untouched 2024--2025 mean AP. Selection and evaluation years are disjoint.}
-\end{center}
+\textbf{The comparison set separates distance, published mechanistic forms, and a flexible statistical control.} Distance-only ranks cells by proximity to the previously reported range. The Cook-2021 comparator transfers the published $\exp(-0.045d)$ spatial kernel to grid-cell centers \cite{cook2021}. The Ruzzier-2025 comparator transfers the published suitability-to-resistance transform and 25.418-km annual distance scale \cite{ruzzier2025}. Fisher--KPP uses uniform land conductivity and growth. The covariate hazard is a regularized logistic model using multiscale frontier, climate, host, geographic, and terrain predictors. OG-RDE additionally includes reaction--diffusion state fields. These transfers are fair common-endpoint tests, not exact replications of the original studies.
 
-\clearpage
-\begin{multicols}{2}
-\tightsub{Frozen temporal replay}
-\end{multicols}
-\noindent\includegraphics[width=\linewidth]{../figures/fig5_frozen_validation.pdf}
-\vspace{-5pt}
-\begin{multicols}{2}
-\noindent\textbf{Figure 5.} \textbf{Left:} target-year AP after learned coefficients were fit through 2023 and frozen. Physics and literature comparators have fixed published or declared parameters. \textbf{Right:} within-block AP with 2,500 geographic-block bootstrap intervals over 31 block-years in 17 blocks. Unlike Figure 2, learned models are temporally frozen but not spatially refit.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.82\textwidth]{../figures/fig9_eco_rd_fit.pdf}
+  \caption{Eco-RD parameter fitting and untouched evaluation. Left, the pre-2024 search surface after retaining the best environmental settings for each diffusion--growth pair. Right, mean average precision on 2024--2025 after the specification was frozen.}
+  \label{fig:fit}
+\end{figure}
 
-\tightsub{Eco-RD improves the transferred physics baselines}
-Eco-RD scores 0.490 AP in 2024 and 0.496 in 2025. Cook-2021 scores 0.435 and 0.458, so Eco-RD's mean gain is 0.046 AP, or 10.4\% relative. The Ruzzier-2025 transfer scores 0.316 and 0.370; Eco-RD's mean gain is 0.150 AP, or 43.6\%. Distance alone scores 0.275 and 0.288, a 75.1\% relative Eco-RD improvement. Eco-RD is higher in each individual frozen year for all three comparisons, rather than relying on one favorable year.
+\subsection{Evaluation}
 
-\tightsub{The claim is bounded}
-The covariate hazard scores 0.495 and 0.527, averaging 0.511 and remaining 3.6\% above Eco-RD. OG-RDE averages 0.502. Moreover, paired geographic-block intervals for Eco-RD minus Cook ($0.002$, 95\% interval $-0.037$ to $0.033$) and Eco-RD minus Ruzzier ($0.022$, $-0.034$ to $0.070$) cross zero. The annual ranking supports improvement over these transferred mechanistic comparators on this endpoint; the block analysis says available geography is insufficient to claim a uniform local advantage.
+\textbf{Evaluation ranks only cells that had not been reported before each target year.} Average precision (AP) is primary because new reports are rare relative to candidate cells. AP summarizes precision across all recall thresholds. We also report recall among the highest-ranked 5\% of eligible cells, representing a constrained survey budget. The frozen evaluation contains 110 positive cells among 1,250 candidates in 2024 and 139 positives among 1,140 candidates in 2025.
 
-\begin{center}\small
-\begin{tabular}{lrrr}
+\textbf{Spatial uncertainty was assessed with geographic blocks rather than random point splits.} The domain was partitioned into fixed $2^\circ\times2^\circ$ blocks, and 2,500 block-bootstrap samples preserved all repeated years within a sampled block. Because only two untouched years are available and occurrence data are presence-only, intervals are descriptive rather than a substitute for prospective surveillance.
+
+\section{Results}
+
+\subsection{Fitted environmental response}
+
+\textbf{The fitted model gave climate a stronger penalty than host vegetation.} The selected powers were $p_C=1.6$ and $p_V=1.0$, so middling climate values were reduced more strongly than middling host scores. Both fitted floors were zero, meaning that the model did not grant an artificial minimum establishment quality when either environmental factor was absent. The conductivity floor remained 0.08 for numerical continuity; it changes movement resistance but does not create local establishment where $S_i=0$.
+
+\subsection{Frozen temporal performance}
+
+\textbf{Eco-RD improved all three selected distance and published mechanistic baselines in both untouched years.} Eco-RD scored 0.490 AP in 2024 and 0.496 in 2025, averaging 0.493. Its mean AP was 10.4\% higher than the Cook-2021 transfer, 43.6\% higher than the Ruzzier-2025 transfer, and 75.1\% higher than distance alone. At the highest-ranked 5\% of cells, Eco-RD captured 36 of 110 new reports in 2024 and 35 of 139 in 2025.
+
+\begin{table}[H]
+\centering
+\caption{Frozen 2024--2025 first-report performance. Mean R@5\% is annual recall among the highest-ranked 5\% of eligible cells.}
+\label{tab:results}
+\begin{tabular}{@{}lrrr@{}}
 \toprule
 Model & 2024 AP & 2025 AP & Mean R@5\% \\
 \midrule
-Covariate hazard & .495 & .527 & .285 \\
-OG-RDE & .491 & .513 & .280 \\
-Eco-RD & .490 & .496 & .290 \\
-Transport RD & .478 & .482 & .278 \\
-Climate RD & .469 & .480 & .253 \\
-Fisher--KPP & .464 & .480 & .258 \\
-Full mechanistic & .443 & .472 & .288 \\
-Cook-2021 kernel & .435 & .458 & .234 \\
-Ruzzier-2025 transfer & .316 & .370 & .212 \\
-Distance kernel & .275 & .288 & .255 \\
+Covariate hazard & 0.495 & 0.527 & 0.285 \\
+OG-RDE & 0.491 & 0.513 & 0.280 \\
+Eco-RD & 0.490 & 0.496 & 0.290 \\
+Transport RD & 0.478 & 0.482 & 0.278 \\
+Climate RD & 0.469 & 0.480 & 0.253 \\
+Fisher--KPP & 0.464 & 0.480 & 0.258 \\
+Cook-2021 transfer & 0.435 & 0.458 & 0.234 \\
+Ruzzier-2025 transfer & 0.316 & 0.370 & 0.212 \\
+Distance only & 0.275 & 0.288 & 0.255 \\
 \bottomrule
 \end{tabular}
-\end{center}
-\noindent\textbf{Table 3.} Frozen replay performance. R@5\% is the macro mean of annual recall in the highest-risk 5\% of eligible cells.
-\end{multicols}
-\vspace{-2pt}
-\begin{center}
-\includegraphics[width=.88\linewidth]{../figures/fig6_frozen_maps.pdf}
-\vspace{-5pt}
+\end{table}
 
-\parbox{.9\linewidth}{\small\textbf{Figure 6.} Frozen Eco-RD maps for both complete holdout years. Gold contours enclose the fixed top-5\% survey allocation; coral rings mark cells first reported in that year. The maps expose both useful concentration near the advancing front and geographically structured misses.}
-\end{center}
+\textbf{The strongest result is therefore narrower than universal state-of-the-art superiority.} The study-built covariate hazard averaged 0.511 AP and OG-RDE averaged 0.502, both above Eco-RD. Moreover, the paired geographic-block interval for Eco-RD minus Cook was $-0.037$ to $0.033$, and the interval for Eco-RD minus Ruzzier was $-0.034$ to $0.070$. Both cross zero. The evidence supports better annual ranking than these transferred published mechanistic baselines on this endpoint, but not a uniform advantage in every region or over every statistical model.
 
-\begin{multicols}{2}
-\tightsub{What the map reveals}
-In 2024, the fixed 5\% allocation contains 36 of 110 new-report cells; in 2025 it contains 35 of 139. Many detections fall near the modeled front, but rings beyond the gold contours show that the score misses both isolated advances and portions of the broader eastern front. A single AP value hides this distinction. The map makes false concentration and missed exploration visible to a domain expert.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{../figures/fig5_frozen_validation.pdf}
+  \caption{Frozen temporal replay. Left, annual AP after coefficients and specifications were fixed through 2023. Right, within-block AP with geographic-block bootstrap intervals. Annual improvements do not imply a resolved local advantage in every block.}
+  \label{fig:frozen}
+\end{figure}
 
-\tightsub{Interpolation is a hypothesis}
-The green field is spatially continuous even where reports are sparse because diffusion and covariate features interpolate pressure between observations. That continuity is useful for search planning, but it is modeled evidence, not an observed boundary. White masked cells are outside the eligible land domain; pale eligible cells are low-ranked, not verified absences. This separation is retained in the application: reports remain discrete, interpolated risk is labeled, and prospective growth is off by default.
+\subsection{Spatial pattern of predictions}
 
-\tightsub{Why the second year is harder}
-The 2025 top-5\% recall declines even as AP rises. AP rewards ranking across the full candidate list, whereas R@5\% examines one narrow operational budget. A model can improve global ordering while concentrating its very highest scores too tightly. Showing both metrics prevents a better aggregate rank from being mistaken for better performance at every decision threshold.
+\textbf{The maps show useful concentration near the advancing front together with structured misses.} The model places high pressure around previously reported cells where host and climate conditions are favorable. Isolated first reports beyond the highest-risk contour remain difficult, consistent with unmodeled hitchhiking, uneven observation, or both. Smooth green regions are interpolated model pressure, whereas ringed points are reported evidence.
 
-\tightsub{What remains external}
-The 2024--2025 outcomes are external to coefficient fitting, but not external to the 2026 data snapshot or to analyst choices. The maps are therefore a frozen temporal stress test, not independent confirmation of occupancy. A second species or structured survey would test transfer across observation processes; a preregistered 2027 map would test real-time forecasting.
-\end{multicols}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{../figures/fig6_frozen_maps.pdf}
+  \caption{Frozen Eco-RD predictions for 2024 and 2025. Gold contours enclose the fixed top-5\% survey allocation; coral rings identify cells first reported in that year. White cells are outside the eligible U.S. land domain.}
+  \label{fig:maps}
+\end{figure}
 
-\clearpage
-\begin{multicols}{2}
-\tightsub{Operational yield and model agreement}
-\end{multicols}
-\includegraphics[width=.94\linewidth]{../figures/fig7_frozen_yield.pdf}
-\vspace{-5pt}
-\begin{multicols}{2}
-\noindent\textbf{Figure 7.} \textbf{Left:} mean fraction of 2024--2025 first reports captured as the survey budget expands; the diagonal is random ranking. \textbf{Right:} AP above frozen-target prevalence, normalized by the remaining attainable range.
+\section{Discussion}
 
-\tightsub{A decision-relevant view}
-Average precision summarizes every threshold, but surveillance programs must choose a budget. At 5\%, the frozen models capture roughly one quarter to three tenths of new reports; widening inspection increases yield smoothly rather than revealing a single defensible cutoff. This is why LanternTrace displays continuous relative risk and makes the prospective layer optional. The model can prioritize search, but it cannot turn an arbitrary contour into an ecological boundary.
+\textbf{Adding climate and edible host vegetation improved a simple physical spread model because the invasion front is not equally likely to establish in every direction.} Distance alone assumes that all nearby cells are interchangeable. Eco-RD instead lets suitable cells both accept pressure more readily and support faster local growth, while unfavorable cells slow movement and establishment. This creates an interpretable environmental resistance surface without requiring each cell to have a separately fitted coefficient.
 
-\tightsub{Shared signal dominates}
-The frozen score fields are strongly rank-correlated (Figure 8). Their agreement reflects a common advancing-front signal carried by distance, neighborhood pressure, climate, vegetation, and the updated origin state. Eco-RD improves annual AP over both transferred published forms, but its blockwise advantages are heterogeneous. This distinction is why the paper reports both temporal rankings and geographic uncertainty.
-\end{multicols}
-\vspace{-1pt}
-\begin{center}
-\includegraphics[width=.91\linewidth]{../figures/fig8_model_agreement.pdf}
-\vspace{-5pt}
+\textbf{The single-cell resistance definition makes the model easier to inspect but does not make the parameters directly biological.} A resistance of 12.5 means that the model's conductivity is one-twelfth-and-a-half of the ideal baseline; it does not mean that a lanternfly experiences 12.5 units of physical force or that arrival takes 12.5 years. Likewise, $D$ and $r$ are predictive coefficients at this grid and monthly time step. They cannot be converted into absolute flight speed, population growth, or insect counts without independent abundance data and calibration.
 
-\parbox{.91\linewidth}{\small\textbf{Figure 8.} \textbf{Left:} pooled Spearman rank correlation among frozen 2024--2025 score fields. \textbf{Right:} distributions of matched within-block AP differences; zero denotes no Eco-RD advantage. Agreement and heterogeneous local differences explain why an annual improvement need not occur uniformly in every region.}
-\end{center}
+\textbf{Wind and human transport are important next mechanisms, but they require separately validated inputs.} The current public app can display average wind vectors and exploratory advection, yet the frozen claim in this paper is based on climate and host vegetation. A climatological mean wind field cannot recover the timing of individual flight events, and human transport can produce jumps unrelated to prevailing wind. Future fitting should use versioned weather reanalysis, road and rail networks, freight or traffic flows, and held-out event dates to determine whether these terms improve prediction rather than merely making the animation more realistic.
 
-\clearpage
-\begin{multicols}{2}
-\tightsection{Discussion}
-\tightsub{Interpretation}
-The defensible result has two parts. First, cumulative evaluation is optimistic: replacing cumulative reconstruction with frontier ranking lowers raw AP by 0.368--0.470. Second, after that correction and a pre-2024 fit, climate--host physics improves the two transferred published mechanistic forms on both untouched years.
+\textbf{Presence-only data remain the main limitation.} A first report is the first record available in the snapshot, not necessarily the first biological arrival. Reporting effort varies with population, publicity, agency programs, and access. The population-adjusted observed layer helps users interpret report intensity, but it cannot repair the forecast labels. Structured trap or inspection data with documented effort are needed to separate occupancy from detection and to calibrate probabilities.
 
-The comparison does not justify calling Eco-RD universally state of the art. Ruzzier's raster, domain, predictors, and calibration target differ, so its score here measures a transparent transfer, not the original paper's full performance. The study-built covariate hazard also remains higher. What is supported is narrower and useful: explicitly fitted climate and edible-host vegetation improve the transferred Cook and Ruzzier physics on this common first-report endpoint.
+\textbf{The frozen replay improves temporal separation but is not a preregistered prospective test.} The 2024--2025 labels did not fit the model, yet the overall analysis was designed after the 2026 snapshot existed, and later uploads can populate earlier event years. Only two complete untouched years are available. A stronger study would publish a fixed 2027 risk map before outcomes accrue, retain the complete versioned input bundle, and evaluate against independent survey effort.
 
-\tightsub{Why rankings disagree}
-Annual AP pools cells; within-block AP conditions on blocks with both classes; all-block activation asks whether broad regions become active. A model can identify active regions yet add little local ordering skill. The block-refit analysis tests coefficient transfer while retaining origin-time state in the held block; it is not transfer to a never-monitored region.
+\textbf{The economic figures motivate prioritization but should not be read as LanternTrace forecasts.} The Penn State values are scenario-based estimates for Pennsylvania agriculture, forestry, and the wider economy in 2019 conditions \cite{harper2019}. LanternTrace does not presently convert modeled pressure into crop-specific yield loss or dollars. A defensible economic extension would couple calibrated occupancy and abundance to crop exposure, damage functions, prices, and uncertainty intervals.
 
-\tightsub{Research interface and evidence separation}
-The accompanying LanternTrace Explorer provides an interactive representation of the distinctions evaluated here. Observed first reports remain a separate evidence layer, while users may compare diffusion hypotheses, advance monthly physics steps, and inspect interpolated relative-risk contours in sparsely reported areas. Prospective playback is disabled by default, and historical assimilating animation is labeled separately from independent backtesting. These design constraints reduce the risk that modeled spread will be interpreted as observed spread.
+\section{Conclusion}
 
-\tightsub{Limitations}
-\textbf{No verified absences or availability timestamps.} Pseudo-negatives contain unoccupied and undetected cells. A 2026 snapshot is partitioned by event date, so later uploads can enter earlier reconstructed origins. Results are retrospective, not real-time historical forecasts. Independent structured validation remains essential \cite{independent2020}.
+\textbf{LanternTrace moves spotted lanternfly prediction from a distance-only front toward an interpretable environmental spread model.} Eco-RD combines climate and edible host vegetation in a reaction--diffusion equation, fits six parameters before the holdout period, and ranks only cells that were previously unreported. On the frozen 2024--2025 replay, the model improved mean AP by 10.4\% over the transferred Cook-2021 kernel, 43.6\% over the transferred Ruzzier-2025 resistance-distance form, and 75.1\% over distance alone.
 
-\textbf{Static and biased covariates.} Host records are a current 21,600-record API snapshot; WorldClim is static. GBIF host occurrences reflect access and identification as well as vegetation. Survival days come from a controlled first-instar experiment, not field abundance or full life-cycle fitness.
+\textbf{The model is best understood as a transparent search-prioritization tool rather than a count forecast.} It does not estimate the number of lanternflies in a cell, its geographic intervals do not establish uniform superiority, and a flexible statistical control remains stronger. Prospective evaluation with documented survey effort, event-specific weather, and transportation data is the next step toward a more informed and defensible invasion digital twin.
 
-\textbf{Coarse model and fitted predictive parameters.} The grid smooths barriers and hosts. Eco-RD's $D$, $r$, floors, and powers optimize first-report ranking; they are not biologically identified diffusion or demographic rates. Time-step stability is shown; grid convergence is not.
+\section*{Data and code availability}
 
-\textbf{Short temporal series.} Four exploratory folds and only two frozen targets limit temporal inference. The frozen block analysis has 31 informative block-years in 17 blocks. Block resampling covers geographic sampling variation, not covariate, observation-process, analyst-selection, or structural uncertainty.
+The source code, locked-input manifests, generated tables, figures, tests, and application are available in the \href{https://github.com/axel-slid/lanterntrace-explorer}{public project repository}. The \href{https://www.alex-dils.com/lanterntrace/app/}{interactive LanternTrace map} is also publicly available. Third-party data retain their original licenses. A permanent archive DOI and GBIF derived-dataset DOI remain release tasks.
 
-\textbf{The freeze is not prospective.} The pre-2024 replay prevents target outcomes from changing coefficients, but it was designed after the authors had access to the 2026 snapshot. It is stronger temporal separation, not preregistration or external field validation. January--July 2026 remains post-outcome interim monitoring with 24 positives.
+{\footnotesize
+\begin{thebibliography}{12}
+\setlength{\itemsep}{0pt}
 
-\textbf{No abundance or causal claim.} The state variable is relative invasion pressure. Mechanistic terms improve interpretability but do not identify true diffusion coefficients, growth rates, or transport causality from opportunistic reports.
+\bibitem{usda2025}
+U.S. Department of Agriculture Animal and Plant Health Inspection Service.
+Spotted Lanternfly: Current Status.
+Updated August 26, 2025.
+\href{https://www.aphis.usda.gov/plant-pests-diseases/slf}{USDA APHIS}.
 
-\tightsub{Future validation}
-The next study should freeze the present model and prospectively register 2027 predictions before reports accrue. Independent inspection routes or trap-nights would permit occupancy--detection modeling and honest probability calibration. Replacing schematic corridors with versioned road, rail, freight, and commodity-flow networks would test the human-transport mechanism directly. Leave-region-out validation against withheld states or counties would probe transfer beyond the current frontier. A hierarchical point-process or Bayesian mechanistic model could then propagate observation and process uncertainty rather than only ranking cells.
-\end{multicols}
+\bibitem{harper2019}
+Harper, J.K., Stone, W., Kelsey, T.W., and Kime, L.F. (2019).
+\textit{Potential Economic Impact of the Spotted Lanternfly on Agriculture and Forestry in Pennsylvania}.
+Pennsylvania State University and Center for Rural Pennsylvania.
+\href{https://aese.psu.edu/research/centers/cecd/publications/economic-analyses-including-covid-19-analysis/economic-impact/spotted-lanternfly-2019.pdf/view}{Penn State report}.
 
-\clearpage
-\begin{multicols}{2}
-\tightsection{Conclusion}
-Cumulative occurrence maps are appropriate summaries of reported evidence but poor targets for evaluating frontier forecasts. In this study, cumulative scoring increased raw AP by 0.368--0.470 and normalized lift by 0.384--0.511 because previously reported cells remained positive. Excluding those cells converted range reconstruction into the operationally relevant task of ranking where first reports would occur next.
+\bibitem{wakie2020}
+Wakie, T.T. et al. (2020).
+Establishment risk of \textit{Lycorma delicatula} in the United States and globally.
+\textit{Journal of Economic Entomology} 113, 306--314.
+\href{https://doi.org/10.1093/jee/toz259}{doi:10.1093/jee/toz259}.
 
-In the frozen replay, Eco-RD averaged 0.493 AP. It exceeded Cook-2021 by 10.4\%, the Ruzzier-2025 transfer by 43.6\%, and distance alone by 75.1\%, with the same direction in 2024 and 2025. However, geographic paired intervals crossed zero and the covariate hazard averaged 0.511. The supported claim is therefore improvement over transferred published mechanistic baselines on this retrospective endpoint, not universal superiority.
+\bibitem{barker2025}
+Barker, B.S., Beyer, J., and Coop, L. (2025).
+Real-time integrative mapping of phenology and climatic suitability for the spotted lanternfly.
+\textit{Insects} 16, 790.
+\href{https://doi.org/10.3390/insects16080790}{doi:10.3390/insects16080790}.
 
-The principal requirement for stronger inference is prospective validation. Registering predictions before 2027 reports accrue and evaluating them against documented, independent survey effort would distinguish biological spread from discovery and permit assessment of calibrated risk rather than retrospective ranking alone.
+\bibitem{nixon2020}
+Nixon, L.J. et al. (2020).
+Distribution, survival, and development of spotted lanternfly on host plants found in North America.
+\textit{Environmental Entomology} 49, 1270--1281.
+\href{https://doi.org/10.1093/ee/nvaa126}{doi:10.1093/ee/nvaa126}.
 
-{\scriptsize
-\begin{thebibliography}{20}\setlength\itemsep{1pt}
-\bibitem{ladin2023} Ladin, Z.S. et al. (2023). Human-mediated dispersal drives the spread of the spotted lanternfly. \textit{Scientific Reports} 13, 1098. \href{https://doi.org/10.1038/s41598-022-25989-3}{doi:10.1038/s41598-022-25989-3}.
+\bibitem{ladin2023}
+Ladin, Z.S. et al. (2023).
+Human-mediated dispersal drives the spread of the spotted lanternfly.
+\textit{Scientific Reports} 13, 1098.
+\href{https://doi.org/10.1038/s41598-022-25989-3}{doi:10.1038/s41598-022-25989-3}.
 
-\bibitem{mechanistic2025} Goel, N. et al. (2025). A mechanistic statistical approach to infer invasion characteristics of human-dispersed species with complex life cycle. \textit{Ecological Monographs} 95, e70003. \href{https://doi.org/10.1002/ecm.70003}{doi:10.1002/ecm.70003}.
+\bibitem{cook2021}
+Cook, R.T. et al. (2021).
+Spatial dynamics of spotted lanternfly invasion in the northeastern United States.
+\textit{NeoBiota} 70, 23--42.
+\href{https://doi.org/10.3897/neobiota.70.67950}{doi:10.3897/neobiota.70.67950}.
 
-\bibitem{human2024} Strömbom, D. et al. (2024). Modeling human activity-related spread of the spotted lanternfly. \textit{PLOS ONE} 19, e0307754. \href{https://doi.org/10.1371/journal.pone.0307754}{doi:10.1371/journal.pone.0307754}.
+\bibitem{ruzzier2025}
+Ruzzier, E. et al. (2025).
+Predicting the global distribution and invasion scenarios of the spotted lanternfly, \textit{Lycorma delicatula}.
+\textit{NeoBiota} 103, 267--298.
+\href{https://doi.org/10.3897/neobiota.103.154246}{doi:10.3897/neobiota.103.154246}.
 
-\bibitem{cook2021} Cook, R.T. et al. (2021). Spatial dynamics of spotted lanternfly invasion in the northeastern United States. \textit{NeoBiota} 70, 23--42. \href{https://doi.org/10.3897/neobiota.70.67950}{doi:10.3897/neobiota.70.67950}.
+\bibitem{jones2022}
+Jones, C. et al. (2022).
+Spotted lanternfly predicted to establish in California by 2033 without preventative management.
+\textit{Communications Biology} 5, 558.
+\href{https://doi.org/10.1038/s42003-022-03447-0}{doi:10.1038/s42003-022-03447-0}.
 
-\bibitem{ruzzier2025} Ruzzier, E. et al. (2025). Predicting the global distribution and invasion scenarios of the spotted lanternfly, \textit{Lycorma delicatula}. \textit{NeoBiota} 103, 267--298. \href{https://doi.org/10.3897/neobiota.103.154246}{doi:10.3897/neobiota.103.154246}.
+\bibitem{worldclim}
+Fick, S.E. and Hijmans, R.J. (2017).
+WorldClim 2: new 1-km spatial climate surfaces for global land areas.
+\textit{International Journal of Climatology} 37, 4302--4315.
+\href{https://doi.org/10.1002/joc.5086}{doi:10.1002/joc.5086}.
 
-\bibitem{nixon2020} Nixon, L.J. et al. (2020). Distribution, survival, and development of spotted lanternfly on host plants found in North America. \textit{Environmental Entomology} 49, 1270--1281. \href{https://doi.org/10.1093/ee/nvaa126}{doi:10.1093/ee/nvaa126}.
+\bibitem{gbif}
+GBIF.org (2026).
+\textit{Lycorma delicatula} occurrence API snapshot, retrieved August 2, 2026; included record keys and checksums archived with this study.
+\url{https://www.gbif.org/species/5157899}.
 
-\bibitem{jones2022} Jones, C. et al. (2022). Spotted lanternfly predicted to establish in California by 2033 without preventative management. \textit{Communications Biology} 5, 558. \href{https://doi.org/10.1038/s42003-022-03447-0}{doi:10.1038/s42003-022-03447-0}.
-
-\bibitem{wakie2020} Wakie, T.T. et al. (2020). Establishment risk of \textit{Lycorma delicatula} in the United States and globally. \textit{Journal of Economic Entomology} 113, 306--314. \href{https://doi.org/10.1093/jee/toz259}{doi:10.1093/jee/toz259}.
-
-\bibitem{phenology2025} Barker, B.S., Beyer, J. \,\& Coop, L. (2025). Real-time integrative mapping of phenology and climatic suitability for the spotted lanternfly. \textit{Insects} 16, 790. \href{https://doi.org/10.3390/insects16080790}{doi:10.3390/insects16080790}.
-
-\bibitem{dorazio2014} Dorazio, R.M. (2012). Predicting geographic distributions from presence-only data subject to detection errors. \textit{Biometrics} 68, 1303--1312. \href{https://doi.org/10.1111/j.1541-0420.2012.01779.x}{doi:10.1111/j.1541-0420.2012.01779.x}.
-
-\bibitem{phillips2009} Phillips, S.J. et al. (2009). Sample selection bias and presence-only distribution models. \textit{Ecological Applications} 19, 181--197. \href{https://doi.org/10.1890/07-2153.1}{doi:10.1890/07-2153.1}.
-
-\bibitem{thinning2023} Ten Caten, C. \,\& Dallas, T.A. (2023). Thinning occurrence points does not improve species distribution model performance. \textit{Ecosphere} 14, e4703. \href{https://doi.org/10.1002/ecs2.4703}{doi:10.1002/ecs2.4703}.
-
-\bibitem{independent2020} Smith, J.N., Kelly, N. \,\& Renner, I.W. (2021). Validation of presence-only models for conservation planning. \textit{Ecological Applications} 31, e02214. \href{https://doi.org/10.1002/eap.2214}{doi:10.1002/eap.2214}.
-
-\bibitem{hijmans2012} Hijmans, R.J. (2012). Cross-validation of species distribution models: removing spatial sorting bias and calibration with a null model. \textit{Ecology} 93, 679--688. \href{https://doi.org/10.1890/11-0826.1}{doi:10.1890/11-0826.1}.
-
-\bibitem{valavi2022} Valavi, R. et al. (2022). Predictive performance of presence-only species distribution models: a benchmark study with reproducible code. \textit{Ecological Monographs} 92, e01486. \href{https://doi.org/10.1002/ecm.1486}{doi:10.1002/ecm.1486}.
-
-\bibitem{worldclim} Fick, S.E. \,\& Hijmans, R.J. (2017). WorldClim 2: new 1-km spatial climate surfaces. \textit{International Journal of Climatology} 37, 4302--4315. \href{https://doi.org/10.1002/joc.5086}{doi:10.1002/joc.5086}.
-
-\bibitem{census} U.S. Census Bureau (2026). 2025 Cartographic Boundary Files, states, 1:500,000. \href{https://www.census.gov/geographies/mapping-files/2025/geo/carto-boundary-file.html}{Census Geography}.
-
-\bibitem{gbif} GBIF.org (2026). \textit{Lycorma delicatula} occurrence API snapshot, retrieved 2 Aug 2026; query and record keys archived with this study. \href{https://www.gbif.org/species/5157899}{GBIF taxon 5157899}.
-\end{thebibliography}}
-
-\noindent\textbf{Author statement.} Alex Arthur Dils developed the application, analysis, visualizations, and manuscript. Third-party data retain the source licenses documented with the public artifact. Funding, competing-interest, and permanent archive DOI statements remain to be confirmed before journal submission. All numerical claims in this manuscript are generated from the accompanying artifacts; interpretive claims are bounded by the limitations above.
-\end{multicols}
+\end{thebibliography}
+}
 
 \end{document}
